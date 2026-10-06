@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "site", "runtimeExecutable": "python", "runtimeArgs": ["-m", "http.server", "5500"], "port": 5500 },
+    { "name": "admin", "runtimeExecutable": "node", "runtimeArgs": ["admin.js"], "port": 5600, "env": { "NO_OPEN": "1" } }
+  ]
+}

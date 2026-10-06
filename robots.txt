@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /shortlist.html
+
+Sitemap: https://www.burakaltas.com/sitemap.xml

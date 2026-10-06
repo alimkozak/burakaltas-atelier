@@ -1,0 +1,15 @@
+# Üretilen yayın klasörü ve panel yedekleri (bilgisayarda kalır)
+yayin/
+.yedek/
+
+# Yarım kalmış video yüklemeleri
+*.part
+
+# Bu bilgisayara özel ayarlar
+.claude/settings.local.json
+
+# İşletim sistemi / editör dosyaları
+Thumbs.db
+desktop.ini
+.DS_Store
+node_modules/

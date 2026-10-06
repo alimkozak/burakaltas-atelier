@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin — Burak Altaş Atelier</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="../assets/fonts/jost-normal-300-500-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/bodoni-moda-normal-400-600-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/fonts.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <aside class="side">
+    <a class="side__logo" href="#modeller"><span class="mono">B<i>A</i></span><span>Admin paneli</span></a>
+    <nav class="side__nav" aria-label="Bölümler">
+      <a href="#modeller" data-tab="modeller"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l-1 5 4 13H6l4-13-1-5z"/></svg>Modeller</a>
+      <a href="#tasarimci" data-tab="tasarimci"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4.5 4.5-6 8-6s6.5 1.5 8 6"/></svg>Tasarımcı</a>
+      <a href="#yorumlar" data-tab="yorumlar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5z"/></svg>Gelin yorumları</a>
+      <a href="#ayarlar" data-tab="ayarlar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Ayarlar</a>
+      <a href="#yayinla" data-tab="yayinla"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 15v5h16v-5"/></svg>Yayınla</a>
+    </nav>
+    <a class="side__site" href="/" target="_blank" rel="noopener">Siteyi önizle ↗</a>
+  </aside>
+  <main class="main" id="view" tabindex="-1">
+    <p class="loading">Yükleniyor…</p>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

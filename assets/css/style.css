@@ -1058,3 +1058,7 @@ html[lang="tr"] .hide-tr { display: none; }
   .hdr.is-hidden ~ main .mrow .input { scroll-margin-top: 170px; }
 }
 @media (prefers-reduced-motion: reduce) { .mcard *, .mfig * { transition: none !important; } }
+
+/* Space for content drawn by JavaScript, so nothing below jumps when it arrives (layout shift) */
+.gown:empty { min-height: 150vh; min-height: 150svh; }
+.grid:empty { min-height: 150vh; min-height: 150svh; }

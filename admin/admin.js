@@ -72,12 +72,13 @@
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error(`"${file.name}" desteklenmiyor. JPG, PNG ya da WEBP yükleyin (iPhone'da: Ayarlar › Kamera › Formatlar › En Uyumlu).`);
     const bmp = await createImageBitmap(file);
     const make = (max, q) => {
-      const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+      // Sized by WIDTH: the site's srcset says "800w", so the file must really be 800px wide
+      const s = Math.min(1, max / bmp.width);
       const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
       c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
       return c.toDataURL("image/jpeg", q);
     };
-    const r = await post("upload", { name, lg: make(1800, 0.85), sm: make(800, 0.8) });
+    const r = await post("upload", { name, lg: make(1800, 0.85), sm: make(800, 0.8), xs: make(480, 0.78) });
     return r.path;
   }
   function photoManager(container, list, { name, max = 12, onChange }) {
@@ -157,12 +158,12 @@
   const seek = (v, t) => new Promise((r) => { v.addEventListener("seeked", r, { once: true }); v.currentTime = t; });
   async function uploadFrame(v, name) {
     const make = (max, q) => {
-      const s = Math.min(1, max / Math.max(v.videoWidth, v.videoHeight));
+      const s = Math.min(1, max / v.videoWidth);
       const c = document.createElement("canvas"); c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
       c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
       return c.toDataURL("image/jpeg", q);
     };
-    return (await post("upload", { name: `${name}-video`, lg: make(1800, 0.85), sm: make(800, 0.8) })).path;
+    return (await post("upload", { name: `${name}-video`, lg: make(1800, 0.85), sm: make(800, 0.8), xs: make(480, 0.78) })).path;
   }
   const sendVideo = (file, name, onProgress) => new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();

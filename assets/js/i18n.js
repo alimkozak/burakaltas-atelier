@@ -404,6 +404,7 @@ window.I18N = {
     "ct.wa": "Bize ulaşmanın en hızlı yolu — fotoğraf ve sesli mesaj gönderebilirsiniz.",
     "meta.policies": "Gizlilik & koşullar — Burak Altaş Atelier",
     "meta.shortlist": "Favorilerim — Burak Altaş Atelier",
+    "coll.gridTitle": "Modeller",
     "meta.404": "Sayfa bulunamadı — Burak Altaş Atelier",
     "pol.eyebrow": "Önemli bilgiler, sade bir dille",
     "pol.title": "Gizlilik &amp; <em>koşullar</em>",

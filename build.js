@@ -64,8 +64,11 @@ const HEADERS = `/*.html
 function build({ dist = false } = {}) {
   const W = loadSite();
   const S = W.SITE, G = W.GOWNS || [];
+  // Uploads that also have a 480px phone version (name-xs.jpg); older uploads don't
+  const upDir = path.join(root, "assets/img/uploads");
+  const xs = fs.existsSync(upDir) ? fs.readdirSync(upDir).filter((f) => /-xs\.(jpg|png|webp)$/.test(f)).map((f) => `assets/img/uploads/${f.replace(/-xs(\.\w+)$/, "$1")}`) : [];
   fs.writeFileSync(path.join(root, "assets/js/built.js"),
-    `/* build.js tarafından otomatik üretilir — elle düzenlemeyin */\nwindow.BUILT_GOWNS = ${JSON.stringify(G.map((g) => g.id))};\n`);
+    `/* build.js tarafından otomatik üretilir — elle düzenlemeyin */\nwindow.BUILT_GOWNS = ${JSON.stringify(G.map((g) => g.id))};\nwindow.UPLOAD_XS = ${JSON.stringify(xs)};\n`);
   // Source pages never carry version stamps (older builds wrote them here — remove them)
   stampAssets(root, { strip: true });
   // A fresh Git checkout has no exchange rates yet; pages work without them until the next publish
@@ -95,7 +98,15 @@ function build({ dist = false } = {}) {
       } } : {})
     };
     const vtype = g.video && /\.webm$/i.test(g.video.src) ? "video/webm" : "video/mp4";
-    const head = `<title>${esc(title)}</title>
+    // The first photo is drawn by JavaScript, so the browser would find it late: announce it in
+    // the head with the exact srcset/sizes app.js uses (largest-contentful-paint)
+    const first = (g.images || [])[0];
+    const unsplash = (id, w) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=72`;
+    const heroSet = !first ? "" : /^assets\/img\/uploads\/.+\.(jpg|png|webp)$/.test(first) ? `${first.replace(/(\.\w+)$/, "-sm$1")} 800w, ${first} 1800w`
+      : /^(assets\/|https?:)/.test(first) ? "" : [400, 700, 1000, 1400, 1900].map((w) => `${unsplash(first, w)} ${w}w`).join(", ");
+    const heroSrc = !first ? "" : /^(assets\/|https?:)/.test(first) ? first : unsplash(first, 1400);
+    const preload = first ? `<link rel="preload" as="image" href="${esc(heroSrc)}"${heroSet ? ` imagesrcset="${esc(heroSet)}" imagesizes="(min-width: 1000px) 55vw, 88vw"` : ""} fetchpriority="high">\n  ` : "";
+    const head = `${preload}<title>${esc(title)}</title>
   <meta name="description" content="${esc(`${story} ${fabric}. Made to measure in İzmir, shipped worldwide.`)}">
   <link rel="canonical" href="${url}">
   <meta property="og:type" content="product">
@@ -139,7 +150,7 @@ function makeDist() {
       if (path.basename(p).startsWith(".")) return false;
       // Windows hands cpSync long-path names ("\\?\C:\…"); compare without that prefix
       const rel = path.relative(root, p.replace(/^\\\\\?\\/, "")).split(path.sep).join("/");
-      return !/^assets\/(img|video)\/uploads\/.+\.\w+$/.test(rel) || used.has(rel.replace(/-sm(\.\w+)$/, "$1"));
+      return !/^assets\/(img|video)\/uploads\/.+\.\w+$/.test(rel) || used.has(rel.replace(/-(sm|xs)(\.\w+)$/, "$2"));
     } });
   }
   stampAssets(DIST);

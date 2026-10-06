@@ -252,6 +252,8 @@ async function api(req, res, route, remote) {
     const ext = m[1] === "jpeg" ? "jpg" : m[1];
     fs.writeFileSync(path.join(IMG_DIR, `${base}.${ext}`), Buffer.from(m[2], "base64"));
     if (s) fs.writeFileSync(path.join(IMG_DIR, `${base}-sm.${ext}`), Buffer.from(s[2], "base64"));
+    const x = /^data:image\/(jpeg|png|webp);base64,(.+)$/.exec(body.xs || "");
+    if (x) fs.writeFileSync(path.join(IMG_DIR, `${base}-xs.${ext}`), Buffer.from(x[2], "base64"));
     return send(res, 200, { ok: true, path: `assets/img/uploads/${base}.${ext}` });
   } else if (route === "publish") {
     const fx = await refreshRates();

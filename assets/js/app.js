@@ -67,9 +67,12 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const isLocal = (id) => /^(assets\/|https?:|\.{0,2}\/)/.test(id);
   const src = (id, w = 1000) => isLocal(id) ? id : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=72`;
-  // Photos uploaded through the admin panel come in two sizes: name.jpg (1800px) and name-sm.jpg (800px)
-  const srcset = (id) => /^assets\/img\/uploads\/.+\.(jpg|png|webp)$/.test(id) ? `${id.replace(/(\.\w+)$/, "-sm$1")} 800w, ${id} 1800w`
-    : isLocal(id) ? "" : [400, 700, 1000, 1400, 1900].map((w) => `${src(id, w)} ${w}w`).join(", ");
+  // Photos uploaded through the admin panel come as name.jpg (1800px) and name-sm.jpg (800px); newer
+  // uploads also have name-xs.jpg (480px) for phones — build.js lists which ones in window.UPLOAD_XS
+  const XS = new Set(window.UPLOAD_XS || []);
+  const srcset = (id) => /^assets\/img\/uploads\/.+\.(jpg|png|webp)$/.test(id)
+    ? `${XS.has(id) ? `${id.replace(/(\.\w+)$/, "-xs$1")} 480w, ` : ""}${id.replace(/(\.\w+)$/, "-sm$1")} 800w, ${id} 1800w`
+    : isLocal(id) ? "" : [320, 360, 480, 640, 800, 1000, 1400, 1900].map((w) => `${src(id, w)} ${w}w`).join(", ");
   const img = (id, alt, { sizes = "(min-width: 1080px) 25vw, 50vw", eager = false, w = 1000 } = {}) =>
     `<img src="${src(id, w)}" ${srcset(id) ? `srcset="${srcset(id)}" sizes="${sizes}"` : ""} alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
   const isoDate = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
@@ -237,7 +240,7 @@
           ${["collection", "collection-ap", "atelier", "contact"].map((p) => NAV.find((n) => n.p === p)).map((n, i) => `<a href="${n.href}" data-p="${n.p}" ${i === 3 ? 'class="hdr__nav-x"' : ""} ${n.p === cur ? 'aria-current="page"' : ""}>${L(n)}</a>`).join("")}
         </nav>
         <button class="icon-btn hdr__burger" type="button" aria-label="${t("openMenu")}" aria-expanded="false" data-menu-open>${ICON.menu}</button>
-        <a class="logo" href="index.html" aria-label="Burak Altaş Atelier — ${t("home")}">
+        <a class="logo" href="index.html" aria-label="BA Burak Altaş Atelier — ${t("home")}">
           <span class="logo__mono" aria-hidden="true">B<i>A</i></span>
           <span class="logo__word" aria-hidden="true">Burak Altaş</span>
         </a>
@@ -890,7 +893,7 @@
       const l = list();
       showLabel();
       $("#count").textContent = t(l.length === 1 ? "nGown" : "nGowns", { n: l.length });
-      $("#grid").innerHTML = l.length ? l.map((g) => card(g, { sizes: "(min-width: 1300px) 25vw, (min-width: 900px) 33vw, 50vw" })).join("")
+      $("#grid").innerHTML = l.length ? l.map((g) => card(g, { sizes: "(min-width: 1300px) 23vw, (min-width: 900px) 31vw, 46vw" })).join("")
         : `<div class="grid-empty" style="grid-column:1/-1"><p class="display h3">${t("noMatch")}</p><p class="lede">${t("noMatchSub")}</p><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn--ghost" type="button" data-clear>${t("clearAll")}</button><a class="btn btn--wa" target="_blank" rel="noopener" href="${wa(t("waCustom"))}">${ICON.wa} ${t("askCustom")}</a></div></div>`;
       syncHearts(); observeReveals();
     };

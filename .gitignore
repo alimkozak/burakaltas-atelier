@@ -13,3 +13,11 @@ Thumbs.db
 desktop.ini
 .DS_Store
 node_modules/
+
+# build.js'in ürettiği dosyalar — her bilgisayar kendisi üretir: node build.js
+# (depoda tutulsaydı her yayında 30 dosya değişir, ortak çalışmada çakışma çıkardı)
+gown-*.html
+sitemap.xml
+assets/js/built.js
+assets/js/fx.js
+_headers

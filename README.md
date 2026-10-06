@@ -167,6 +167,23 @@ Site bir vitrin işlevi görür; satış Etsy'den yapılır.
 - Etsy üzerinden gelen müşteriye Etsy mesajlarında WhatsApp numarası ya da site linki **vermeyin**. Etsy, platform dışı satışa yönlendirmeyi yasaklıyor.
 - Sitede Etsy'den daha ucuz bir "direkt fiyat" göstermeyin.
 
+## Birlikte çalışma (GitHub)
+Depo: https://github.com/alimkozak/burakaltas-atelier
+
+**İlk kurulum** (Node.js 18 ya da üstü, önerilen 22 LTS; başka bir şey kurmaya gerek yok):
+1. Depoyu indirin: `git clone https://github.com/alimkozak/burakaltas-atelier.git`
+2. `node admin.js` çalıştırın. Panel http://localhost:5600/admin, site önizlemesi http://localhost:5600/ adresinde açılır.
+
+Model sayfaları, sitemap, `built.js` ve `fx.js` **depoda tutulmaz**. Panel ve önizleme açılırken kendiliğinden üretilir; elle üretmek için: `node build.js`. Yayın klasöründeki sürüm damgaları (`app.js?v=…`) da yalnızca yayında basılır. Böylece iki kişi aynı anda çalışırken bu dosyalarda çakışma çıkmaz.
+
+**Çalışma düzeni:**
+- İşe başlamadan önce: `git pull`
+- Her iş için ayrı dal açın: `git checkout -b olcu-karti-duzeltme`. Bitince GitHub'da Pull Request açın, diğer kişi baktıktan sonra birleştirin.
+- **Katalog içeriği** (`data.js`, `config.js`, yüklenen fotoğraflar) tek kişinin, panelle yönettiği şey olsun. Kod değişiklikleri ise dallarda yapılsın. Aynı anda iki kişi panelden model eklerse `data.js`'de çakışma çıkabilir.
+- Çakışma yine de çıkarsa ve üretilen bir dosyadaysa: dosyayı silin ve `node build.js` çalıştırın.
+
+**Yayına alma:** Netlify'ı GitHub deposuna bağlarsanız `netlify.toml` gereken ayarı içerir: `node build.js --yayin` çalıştırır ve `yayin` klasörünü yayınlar. Her `main` güncellemesinde site kendiliğinden güncellenir.
+
 ## Teknik notlar (yazılımcı için)
 - Veriler `assets/js/data.js` ve `assets/js/config.js` dosyalarındadır. Panel bu dosyaları yazar; elle de düzenlenebilir.
 - Elle düzenlemeden sonra şunu çalıştırın: `node build.js` (yayın klasörü için `node build.js --yayin`).
@@ -174,7 +191,7 @@ Site bir vitrin işlevi görür; satış Etsy'den yapılır.
 - Panel yalnızca bu bilgisayardan erişilebilir (127.0.0.1), internete açılmaz.
 - `onizleme.js` (port 5700) yalnızca yayına girecek dosyaları sunar (`yayin` klasörüyle aynı liste) ve Cloudflare Quick Tunnel açar. Önbelleği kapalıdır, `noindex` başlığı gönderir.
 - Bilgisayardaki Node.js sürümü 18; desteği bitti. Panel çalışıyor ama https://nodejs.org adresinden 22 LTS'ye geçmek önerilir.
-- `build.js`, sayfalardaki JS/CSS bağlantılarına içerik özeti ekler (`app.js?v=…`). Böylece yayından sonra ziyaretçiler eski kataloğu önbellekten görmez. JS/CSS bir yıl önbelleğe alınabilir, HTML her seferinde kontrol edilir (bkz. `netlify.toml`; kendi sunucuda Caddy'de aynı başlıklar kullanılmalı).
+- `build.js`, **yayın klasöründeki** sayfaların JS/CSS bağlantılarına içerik özeti ekler (`app.js?v=…`); kaynak sayfalar temiz kalır. Böylece yayından sonra ziyaretçiler eski kataloğu önbellekten görmez. JS/CSS bir yıl önbelleğe alınabilir, HTML her seferinde kontrol edilir (bkz. `netlify.toml`; kendi sunucuda Caddy'de aynı başlıklar kullanılmalı).
 - Videolar `assets/video/uploads/` klasörüne kaydedilir. Yayın klasörüne yalnızca sitede kullanılan fotoğraf ve videolar kopyalanır; silinen ya da değiştirilen eski dosyalar internete gitmez, bilgisayarda kalır.
 - Döviz kurları `assets/js/fx.js` dosyasına yayın sırasında yazılır; ziyaretçinin tarayıcısı dış servise bağlanmaz.
 - Yazı tipleri (Bodoni Moda, Jost — açık lisanslı) `assets/fonts` klasöründen sunulur, Google Fonts'a bağlanılmaz (AB'de GDPR riski). İletişim sayfasındaki Google Haritalar yalnızca ziyaretçi "Haritayı göster"e basınca yüklenir.

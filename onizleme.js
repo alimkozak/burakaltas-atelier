@@ -103,6 +103,9 @@ function startTunnel() {
   process.on("SIGTERM", stop);
 }
 
+// Model pages, sitemap etc. are not kept in Git — make sure they exist and are current
+try { require("./build.js").build(); } catch (e) { console.log(`\n  ! Sayfalar üretilemedi: ${e.message}\n`); }
+
 const server = http.createServer((req, res) => { try { serve(req, res); } catch { res.writeHead(500); res.end(); } });
 server.listen(PORT, HOST, () => {
   console.log(`\n  Burak Altaş Atelier — Uzaktan önizleme\n  Bu bilgisayarda: http://localhost:${PORT}\n`);

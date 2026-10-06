@@ -306,6 +306,9 @@ function serveStatic(req, res, urlPath) {
   });
 }
 
+// Model pages, sitemap etc. are not kept in Git — make sure they exist and are current
+try { build(); } catch (e) { console.log(`\n  ! Sayfalar üretilemedi: ${e.message}\n`); }
+
 const server = http.createServer(async (req, res) => {
   try {
     // Only same-origin browser requests may change data

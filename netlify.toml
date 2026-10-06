@@ -1,3 +1,8 @@
+# Deploying straight from GitHub: Netlify builds the site and publishes the "yayin" folder
+[build]
+  command = "node build.js --yayin"
+  publish = "yayin"
+
 # Netlify: keep project/editor files private when this folder is deployed as-is
 [[redirects]]
   from = "/.claude/*"

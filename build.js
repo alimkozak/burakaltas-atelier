@@ -24,31 +24,52 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const SIL = { ballgown: "ball gown", aline: "A-line", mermaid: "mermaid", column: "column", mini: "mini" };
 const pick = (o) => (o && typeof o === "object" ? o.en || o.tr || "" : o || "");
 
-/* Cache-busting: every page links assets as "app.js?v=<content hash>", so after a publish
-   visitors' browsers fetch the new catalogue instead of a cached copy. */
+/* Cache-busting: published pages link assets as "app.js?v=<content hash>", so after a publish
+   visitors' browsers fetch the new catalogue instead of a cached copy.
+   Only the "yayin" copy is stamped — the source pages in Git stay clean, so two people
+   working on the site never get merge conflicts on these lines. */
 const crypto = require("crypto");
 const ASSET_REF = /((?:src|href)="\/?assets\/[^"?]+\.(?:js|css))(?:\?v=[a-f0-9]+)?"/g;
-function stampAssets() {
+function stampAssets(dir, { strip = false } = {}) {
   const hashes = {};
-  const hashOf = (rel) => (hashes[rel] ??= fs.existsSync(path.join(root, rel))
-    ? crypto.createHash("sha1").update(fs.readFileSync(path.join(root, rel))).digest("hex").slice(0, 10) : null);
-  for (const f of fs.readdirSync(root).filter((f) => f.endsWith(".html") && !/^gown-/.test(f))) {
-    const file = path.join(root, f), before = fs.readFileSync(file, "utf8");
+  const hashOf = (rel) => (hashes[rel] ??= fs.existsSync(path.join(dir, rel))
+    ? crypto.createHash("sha1").update(fs.readFileSync(path.join(dir, rel))).digest("hex").slice(0, 10) : null);
+  for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".html"))) {
+    const file = path.join(dir, f), before = fs.readFileSync(file, "utf8");
     const after = before.replace(ASSET_REF, (m, ref) => {
+      if (strip) return `${ref}"`;
       const h = hashOf(ref.replace(/^(?:src|href)="\/?/, ""));
       return h ? `${ref}?v=${h}"` : m;
     });
     if (after !== before) fs.writeFileSync(file, after);
   }
 }
+// Netlify reads this file from the published folder (netlify.toml isn't part of a drag-and-drop)
+const HEADERS = `/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/assets/js/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/css/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/video/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/img/*
+  Cache-Control: public, max-age=604800
+`;
 
 function build({ dist = false } = {}) {
   const W = loadSite();
   const S = W.SITE, G = W.GOWNS || [];
-  // built.js is rewritten below — write it first so its hash is final before stamping
   fs.writeFileSync(path.join(root, "assets/js/built.js"),
     `/* build.js tarafından otomatik üretilir — elle düzenlemeyin */\nwindow.BUILT_GOWNS = ${JSON.stringify(G.map((g) => g.id))};\n`);
-  stampAssets();
+  // Source pages never carry version stamps (older builds wrote them here — remove them)
+  stampAssets(root, { strip: true });
+  // A fresh Git checkout has no exchange rates yet; pages work without them until the next publish
+  if (!fs.existsSync(FX_FILE)) fs.writeFileSync(FX_FILE, "window.FX = null;\n");
   const imgUrl = (id, w = 1200, h) =>
     /^https?:/.test(id) ? id : /^assets\//.test(id) ? `${S.domain}/${id}` : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}${h ? `&h=${h}` : ""}&q=75`;
 
@@ -121,6 +142,8 @@ function makeDist() {
       return !/^assets\/(img|video)\/uploads\/.+\.\w+$/.test(rel) || used.has(rel.replace(/-sm(\.\w+)$/, "$1"));
     } });
   }
+  stampAssets(DIST);
+  fs.writeFileSync(path.join(DIST, "_headers"), HEADERS);
 }
 
 /* Exchange rates for the "≈ €1,370" hint on gown pages. Fetched at publish time (ECB data via

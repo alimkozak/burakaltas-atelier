@@ -159,6 +159,8 @@ function cleanGown(g, collections) {
     weeks: [Math.max(1, w[0] || 8), Math.max(1, w[1] || w[0] || 12)],
     etsy: /^https:\/\/(www\.)?(etsy\.com|etsy\.me)\//.test(str(g.etsy)) ? str(g.etsy, 500) : "",
     images, story: bi(g.story, 1200), ...(g.featured ? { featured: true } : {}),
+    // Not made yet: the photos are sketches / renders and the gown is sewn for the first bride who orders it
+    ...(g.concept ? { concept: true } : {}),
     // A short clip of the gown in motion: uploaded file + a poster frame taken from it
     ...(g.video && /^assets\/video\/uploads\/[\w-]+\.(mp4|webm)$/.test(str(g.video.src, 300)) && imgRef(g.video.poster)
       ? { video: { src: g.video.src, poster: imgRef(g.video.poster), date: /^\d{4}-\d{2}-\d{2}$/.test(str(g.video.date, 10)) ? g.video.date : new Date().toISOString().slice(0, 10), ...(Number(g.video.seconds) > 0 ? { seconds: Math.round(Number(g.video.seconds)) } : {}) } } : {}),

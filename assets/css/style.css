@@ -1062,3 +1062,14 @@ html[lang="tr"] .hide-tr { display: none; }
 /* Space for content drawn by JavaScript, so nothing below jumps when it arrives (layout shift) */
 .gown:empty { min-height: 150vh; min-height: 150svh; }
 .grid:empty { min-height: 150vh; min-height: 150svh; }
+
+/* Shortlist: send the list to yourself (favourites live in one browser only) */
+.sl-save { margin: 0 0 32px; padding: 18px 20px; background: var(--paper); border: 1px solid var(--line); display: grid; gap: 12px; }
+.sl-save p { margin: 0; font-size: .95rem; color: var(--ink-2); }
+.sl-save b { color: var(--ink); font-weight: 500; }
+.sl-save__btns { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Not-yet-made designs: honest labelling */
+.card__concept { position: absolute; left: 50%; top: 46px; transform: translateX(-50%); z-index: 2; white-space: nowrap; padding: 5px 12px; border-radius: 999px; background: rgba(252, 250, 246, .92); color: var(--ink); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; pointer-events: none; }
+.gown__concept { margin: 14px 0 0; padding: 12px 14px; border-left: 2px solid var(--gold-deep); background: var(--paper); font-size: .9rem; color: var(--ink-2); }
+.gown__concept b { display: block; font-weight: 500; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 2px; }

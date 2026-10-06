@@ -200,6 +200,15 @@ window.I18N = {
     slAsk: { en: "Ask about these gowns", tr: "Bu modelleri sor" },
     slShareTitle: { en: "My wedding-dress shortlist", tr: "Gelinlik favorilerim" },
     slShareText: { en: "Help me choose my wedding dress 💛", tr: "Gelinliğimi seçmeme yardım et 💛" },
+    conceptTag: { en: "Design · made to order", tr: "Tasarım · sipariş üzerine" },
+    conceptNote: { en: "This gown hasn't been sewn yet — the images are design sketches or renders. It is made for the first time, for you, from your measurements.", tr: "Bu model henüz dikilmedi — görseller tasarım çizimi ya da görselleştirmedir. Sizin için, sizin ölçülerinizle ilk kez dikilir." },
+    slSaveTitle: { en: "Keep your list safe.", tr: "Listenizi kaybetmeyin." },
+    slSaveText: { en: "Your favourites live only in this browser. Send yourself the link — it brings the list back on any phone or computer.", tr: "Favorileriniz yalnızca bu tarayıcıda saklanır. Linki kendinize gönderin — listeyi her telefonda ve bilgisayarda geri getirir." },
+    slSaveIg: { en: "You're browsing inside Instagram, so this list stays in Instagram's browser. Send yourself the link to open it in Safari or Chrome later.", tr: "Instagram'ın içinden geziyorsunuz; bu liste Instagram'ın tarayıcısında kalır. Daha sonra Safari ya da Chrome'da açmak için linki kendinize gönderin." },
+    slSelfText: { en: "My Burak Altaş Atelier favourites:", tr: "Burak Altaş Atelier favorilerim:" },
+    slSelfWa: { en: "Send to myself on WhatsApp", tr: "WhatsApp'ta kendime gönder" },
+    slSelfMail: { en: "Email it to me", tr: "E-postayla gönder" },
+    slSelfCopy: { en: "Copy link", tr: "Linki kopyala" },
 
     /* Contact wizard */
     wz1: { en: "Your gown", tr: "Modeliniz" },

@@ -356,6 +356,7 @@
             <div class="grid2">
               <label class="f full"><span>Etsy ilan linki</span><input class="in" name="etsy" type="url" value="${esc(g.etsy)}" placeholder="https://www.etsy.com/listing/…"></label>
               <label class="check"><input type="checkbox" name="featured" ${g.featured ? "checked" : ""}> Ana sayfada öne çıkar ★</label>
+              <label class="check full"><input type="checkbox" name="concept" ${g.concept ? "checked" : ""}> Henüz dikilmedi — görseller çizim ya da görselleştirme <small style="display:block;color:var(--mute);margin-left:26px">Sitede “Tasarım · sipariş üzerine dikilir” etiketi ve açıklaması çıkar. Yapay zekâyla üretilmiş görsel kullanıyorsanız Etsy ilanında da belirtin.</small></label>
             </div>
           </section>
           <div class="savebar">
@@ -381,7 +382,7 @@
         price: Number(fd.get("price")) || 0, meaning: readBi(form, "meaning"), silhouette: fd.get("silhouette"), neckline: fd.get("neckline"),
         features: fd.getAll("features"), fabric: readBi(form, "fabric"), hours: Number(fd.get("hours")) || 0,
         weeks: [Number(fd.get("w0")) || 8, Number(fd.get("w1")) || Number(fd.get("w0")) || 12],
-        story: readBi(form, "story"), etsy: (fd.get("etsy") || "").trim(), featured: fd.get("featured") === "on", images: g.images,
+        story: readBi(form, "story"), etsy: (fd.get("etsy") || "").trim(), featured: fd.get("featured") === "on", concept: fd.get("concept") === "on", images: g.images,
         model: { height: Number(fd.get("modelH")) || 0, size: (fd.get("modelS") || "").trim() }
       };
     };

@@ -582,6 +582,7 @@
     <article class="card reveal ${cls}" data-cursor="view" data-vt="${g.id}">
       <div class="card__media"${g.video ? ` data-preview="${esc(g.video.src)}"` : ""}>
         <span class="card__no">${g.no}</span>
+        ${g.concept ? `<span class="card__concept">${t("conceptTag")}</span>` : ""}
         ${g.video ? `<span class="card__vid" title="${t("hasVideo")}">${ICON.play}<span class="sr-only">${t("hasVideo")}</span></span>` : ""}
         ${img(g.images[0], gownAlt(g, 0), { sizes })}
         ${second !== g.images[0] ? img(second, "", { sizes }) : ""}
@@ -975,6 +976,7 @@
           <div>
             <h1 class="gown__name">${esc(g.name)}</h1>
             <p class="gown__meaning">— ${esc(L(g.meaning))}</p>
+            ${g.concept ? `<p class="gown__concept"><b>${t("conceptTag")}</b> ${t("conceptNote")}</p>` : ""}
           </div>
           ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")}</p></div>` : ""}
           <p class="gown__story">${esc(L(g.story))}</p>
@@ -1229,9 +1231,19 @@
         <a class="btn btn--wa" target="_blank" rel="noopener" href="${wa(t("waShortlist", { list: names, url: link }))}">${ICON.wa} ${t("slAsk")}</a>
         <a class="btn btn--ghost" href="contact.html?ids=${ids.join(",")}">${t("enquire")}</a>
       </div>
+      ${shared.length ? "" : `
+      <div class="sl-save">
+        <p><b>${t("slSaveTitle")}</b> ${t(/Instagram|FBAN|FBAV/.test(navigator.userAgent) ? "slSaveIg" : "slSaveText")}</p>
+        <div class="sl-save__btns">
+          <a class="btn btn--ghost btn--sm" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(`${t("slSelfText")}\n${names}\n${link}`)}">${ICON.wa} ${t("slSelfWa")}</a>
+          <a class="btn btn--ghost btn--sm" href="mailto:?subject=${encodeURIComponent(t("slShareTitle"))}&body=${encodeURIComponent(`${t("slSelfText")}\n${names}\n\n${link}`)}">${t("slSelfMail")}</a>
+          <button class="btn btn--ghost btn--sm" type="button" data-sl-copy>${t("slSelfCopy")}</button>
+        </div>
+      </div>`}
       <div class="grid" style="padding-top:0">${gowns.map((g) => card(g, { sizes: "(min-width: 900px) 25vw, 50vw" })).join("")}</div>`;
-    box.onclick = (e) => {
+    box.onclick = async (e) => {
       if (e.target.closest("[data-sl-share]")) share({ title: t("slShareTitle"), text: t("slShareText"), url: link });
+      if (e.target.closest("[data-sl-copy]")) { try { await navigator.clipboard.writeText(link); toast(t("linkCopied")); } catch { prompt(t("slSelfCopy"), link); } }
       if (e.target.closest("[data-keep]")) { shortlist.add(shared); toast(t("savedAll")); }
     };
     syncHearts(); observeReveals();

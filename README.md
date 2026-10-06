@@ -65,7 +65,7 @@ Bu, test ve küçük ekip için geçici bir çözümdür. Kalıcı çözüm, sun
 | `fitting.html` | **Online prova odası:** 3 randevu türü, gelinin kendi saat diliminde gün ve saat seçimi, ölçü görüşmesi için kadın / erkek / fark etmez tercihi, hazırlık listesi, **ölçü kartı** (aşağıda) |
 | `contact.html` | 3 adımlı talep formu (WhatsApp ya da e-posta ile gönderilir) |
 | `policies.html` | Gizlilik (KVKK & GDPR), sipariş, üretim, kargo, iade & tadilat. Her sayfanın altından bağlantı verilir. |
-| `shortlist.html` | Favoriler; "Ailemle paylaş" linki |
+| `shortlist.html` | Favoriler; "Ailemle paylaş" linki ve "kendime gönder" (WhatsApp / e-posta / link). Favoriler yalnızca o tarayıcıda saklandığı için gelin linki kendine gönderip başka cihazda listeyi geri açabilir. |
 
 ## Online randevu sistemi
 Site şu an **kendi talep sistemiyle** çalışıyor:
@@ -144,6 +144,14 @@ Notlar:
   - "Kilonuz 2 kg'dan, göğüs ya da bel ölçünüz 2 cm'den fazla değişirse yeniden ölçün" eşiği.
 - [ ] **Kişiselleştirme ücretleri:** Panel › Ayarlar. Boş bırakılan seçenekte ücret yazmaz, `0` yazılırsa "ücretsiz" yazar, sayı yazılırsa "+$120" gibi görünür ve fiyat gelin seçtikçe güncellenir.
 - [ ] **Fotoğraftaki modelin boyu ve bedeni:** Panel › Modeller › Düzenle. Yurt dışındaki gelinlerin en çok sorduğu bilgilerden biri.
+
+## Henüz dikilmemiş tasarımlar
+Daha önce üretilmemiş bir modeli de kataloğa koyabilirsiniz: Burak'ın çizimi ya da bir görselleştirme ile. Panel › Modeller › Düzenle › **"Henüz dikilmedi"** kutusunu işaretleyin.
+
+- Kartta **"Tasarım · sipariş üzerine"** etiketi çıkar.
+- Model sayfasında görsellerin çizim ya da görselleştirme olduğu ve modelin gelin için ilk kez dikileceği açıkça yazar.
+- **Başka tasarımcıların fotoğraflarını kullanmayın.** Hem telif ihlalidir hem Etsy ilanı kapatabilir.
+- **Yapay zekâ görselleri:** Kullanıyorsanız Etsy ilanında da bunu belirtin (Etsy'nin kuralı).
 
 ## Model videoları
 Fotoğraf kumaşın hareketini, kuyruğun dökülüşünü göstermez; video gösterir. Panel › Modeller › Düzenle › **Video** bölümüne videoyu sürükleyin.

@@ -7,16 +7,17 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const { toTurkish, withLangLinks } = require("./build-tr.js");
 
 const root = __dirname;
 const DIST = path.join(root, "yayin");
 // Only these go live — the admin panel, scripts and notes stay on your computer
-const PUBLIC = ["assets", "favicon.svg", "apple-touch-icon.png", "site.webmanifest", "robots.txt", "sitemap.xml"];
+const PUBLIC = ["tr", "assets", "favicon.svg", "apple-touch-icon.png", "site.webmanifest", "robots.txt", "sitemap.xml"];
 
 function loadSite() {
   const ctx = { window: {} };
   vm.createContext(ctx);
-  for (const f of ["assets/js/config.js", "assets/js/data.js"]) vm.runInContext(fs.readFileSync(path.join(root, f), "utf8"), ctx);
+  for (const f of ["assets/js/config.js", "assets/js/data.js", "assets/js/i18n.js"]) vm.runInContext(fs.readFileSync(path.join(root, f), "utf8"), ctx);
   return ctx.window;
 }
 
@@ -29,7 +30,7 @@ const pick = (o) => (o && typeof o === "object" ? o.en || o.tr || "" : o || "");
    Only the "yayin" copy is stamped — the source pages in Git stay clean, so two people
    working on the site never get merge conflicts on these lines. */
 const crypto = require("crypto");
-const ASSET_REF = /((?:src|href)="\/?assets\/[^"?]+\.(?:js|css))(?:\?v=[a-f0-9]+)?"/g;
+const ASSET_REF = /((?:src|href)="(?:\.\.\/|\/)?assets\/[^"?]+\.(?:js|css))(?:\?v=[a-f0-9]+)?"/g;
 function stampAssets(dir, { strip = false } = {}) {
   const hashes = {};
   const hashOf = (rel) => (hashes[rel] ??= fs.existsSync(path.join(dir, rel))
@@ -76,18 +77,30 @@ function build({ dist = false } = {}) {
   const imgUrl = (id, w = 1200, h) =>
     /^https?:/.test(id) ? id : /^assets\//.test(id) ? `${S.domain}/${id}` : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}${h ? `&h=${h}` : ""}&q=75`;
 
-  // Remove pages of gowns that no longer exist
+  // Remove pages of gowns (and their Turkish twins) that no longer exist
+  const TR_DIR = path.join(root, "tr");
+  fs.rmSync(TR_DIR, { recursive: true, force: true });
+  fs.mkdirSync(TR_DIR);
   for (const f of fs.readdirSync(root)) if (/^gown-[a-z0-9-]+\.html$/.test(f) && !G.some((g) => `gown-${g.id}.html` === f)) fs.unlinkSync(path.join(root, f));
 
+  // Pages that exist in both languages (404 stays a single, root-level page)
+  const STATIC = fs.readdirSync(root).filter((f) => f.endsWith(".html") && !/^gown-/.test(f) && f !== "404.html");
+  const PAGES = [...STATIC, ...G.map((g) => `gown-${g.id}.html`)];
+  const TRX = (W.I18N && W.I18N.tr) || {};
+  const L2 = (o, lang) => (o && typeof o === "object" ? (lang === "tr" ? o.tr || o.en : o.en || o.tr) || "" : o || "");
+  const SIL_TR = { ballgown: "Prenses", aline: "A kesim", mermaid: "Balık", column: "Düz kesim", mini: "Mini" };
+  const XS = new Set(xs);
+
   const template = fs.readFileSync(path.join(root, "gown.html"), "utf8");
-  for (const g of G) {
-    const kind = g.collection === "afterparty" ? "after-party dress" : "wedding dress";
-    const title = `${g.name} — ${SIL[g.silhouette] || ""} ${kind} | Burak Altaş Atelier`;
-    const story = pick(g.story), fabric = pick(g.fabric);
-    const url = `${S.domain}/gown-${g.id}.html`;
+  const gownHead = (g, lang) => {
+    const tr = lang === "tr", ap = g.collection === "afterparty";
+    const kind = tr ? (ap ? "after party elbisesi" : "gelinlik") : ap ? "after-party dress" : "wedding dress";
+    const title = tr ? `${g.name} — ${SIL_TR[g.silhouette] || ""} ${kind} | Burak Altaş Atelier` : `${g.name} — ${SIL[g.silhouette] || ""} ${kind} | Burak Altaş Atelier`;
+    const story = L2(g.story, lang), fabric = L2(g.fabric, lang);
+    const url = `${S.domain}/${tr ? "tr/" : ""}gown-${g.id}.html`;
     const ld = {
       "@context": "https://schema.org", "@type": "Product", name: `${g.name} ${kind}`, sku: g.no,
-      image: (g.images || []).map((id) => imgUrl(id, 1400)), description: story, material: fabric,
+      image: (g.images || []).map((id) => imgUrl(id, 1400)), description: story, material: fabric, inLanguage: lang,
       brand: { "@type": "Brand", name: "Burak Altaş Atelier" },
       offers: { "@type": "Offer", price: g.price, priceCurrency: S.currency, availability: "https://schema.org/PreOrder", url: g.etsy || S.etsyShop },
       // Lets Google show the clip in video results and on the product listing
@@ -102,12 +115,14 @@ function build({ dist = false } = {}) {
     // the head with the exact srcset/sizes app.js uses (largest-contentful-paint)
     const first = (g.images || [])[0];
     const unsplash = (id, w) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=72`;
-    const heroSet = !first ? "" : /^assets\/img\/uploads\/.+\.(jpg|png|webp)$/.test(first) ? `${first.replace(/(\.\w+)$/, "-sm$1")} 800w, ${first} 1800w`
-      : /^(assets\/|https?:)/.test(first) ? "" : [400, 700, 1000, 1400, 1900].map((w) => `${unsplash(first, w)} ${w}w`).join(", ");
+    const heroSet = !first ? "" : /^assets\/img\/uploads\/.+\.(jpg|png|webp)$/.test(first)
+      ? `${XS.has(first) ? `${first.replace(/(\.\w+)$/, "-xs$1")} 480w, ` : ""}${first.replace(/(\.\w+)$/, "-sm$1")} 800w, ${first} 1800w`
+      : /^(assets\/|https?:)/.test(first) ? "" : [320, 360, 480, 640, 800, 1000, 1400, 1900].map((w) => `${unsplash(first, w)} ${w}w`).join(", ");
     const heroSrc = !first ? "" : /^(assets\/|https?:)/.test(first) ? first : unsplash(first, 1400);
     const preload = first ? `<link rel="preload" as="image" href="${esc(heroSrc)}"${heroSet ? ` imagesrcset="${esc(heroSet)}" imagesizes="(min-width: 1000px) 55vw, 88vw"` : ""} fetchpriority="high">\n  ` : "";
-    const head = `${preload}<title>${esc(title)}</title>
-  <meta name="description" content="${esc(`${story} ${fabric}. Made to measure in İzmir, shipped worldwide.`)}">
+    const tail = tr ? "İzmir'de ölçünüze göre dikilir, dünyanın her yerine gönderilir." : "Made to measure in İzmir, shipped worldwide.";
+    return `${preload}<title>${esc(title)}</title>
+  <meta name="description" content="${esc(`${story} ${fabric}. ${tail}`)}">
   <link rel="canonical" href="${url}">
   <meta property="og:type" content="product">
   <meta property="og:site_name" content="Burak Altaş Atelier">
@@ -119,17 +134,33 @@ function build({ dist = false } = {}) {
   <meta property="og:video:type" content="${vtype}">
   ` : ""}<meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`;
-    const html = template
-      .replace(/<title>[\s\S]*?<\/title>\s*<meta name="description"[^>]*>/, head)
-      .replace('<body data-page="gown">', `<body data-page="gown" data-gown="${g.id}">`);
-    fs.writeFileSync(path.join(root, `gown-${g.id}.html`), html);
-  }
+  };
+  const gownHtml = (g, lang) => template
+    .replace(/<title>[\s\S]*?<\/title>\s*<meta name="description"[^>]*>/, gownHead(g, lang))
+    .replace('<body data-page="gown">', `<body data-page="gown" data-gown="${g.id}">`);
 
+  for (const g of G) {
+    const file = `gown-${g.id}.html`;
+    fs.writeFileSync(path.join(root, file), withLangLinks(gownHtml(g, "en"), S.domain, file, "en"));
+    fs.writeFileSync(path.join(TR_DIR, file), toTurkish(gownHtml(g, "tr"), { file, TR: TRX, pages: PAGES, domain: S.domain, meta: {} }));
+  }
+  // Turkish twins of the static pages (gown.html is the fallback template for unbuilt gowns)
+  for (const f of STATIC) fs.writeFileSync(path.join(TR_DIR, f), toTurkish(fs.readFileSync(path.join(root, f), "utf8"), { file: f, TR: TRX, pages: PAGES, domain: S.domain }));
+  fs.appendFileSync(path.join(root, "assets/js/built.js"), `window.BUILT_TR = ${JSON.stringify(PAGES)};\n`);
+
+  // Sitemap: every page in both languages, each pointing at its twin
   const today = new Date().toISOString().slice(0, 10);
-  const pages = ["", "collection.html", "atelier.html", "designer.html", "fitting.html", "contact.html", "policies.html"];
-  let sm = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
-  for (const p of pages) sm += `  <url><loc>${S.domain}/${p}</loc><lastmod>${today}</lastmod></url>\n`;
-  for (const g of G) sm += `  <url><loc>${S.domain}/gown-${g.id}.html</loc><lastmod>${today}</lastmod>${(g.images || []).map((id) => `<image:image><image:loc>${esc(imgUrl(id, 1400))}</image:loc></image:image>`).join("")}</url>\n`;
+  const SM_PAGES = ["index.html", "collection.html", "atelier.html", "designer.html", "fitting.html", "contact.html", "policies.html"];
+  const loc = (file, lang) => `${S.domain}/${lang === "tr" ? "tr/" : ""}${file === "index.html" ? "" : file}`;
+  const alt = (file) => ["en", "tr"].map((l) => `<xhtml:link rel="alternate" hreflang="${l}" href="${loc(file, l)}"/>`).join("") + `<xhtml:link rel="alternate" hreflang="x-default" href="${loc(file, "en")}"/>`;
+  let sm = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n`;
+  for (const lang of ["en", "tr"]) {
+    for (const p of SM_PAGES) sm += `  <url><loc>${loc(p, lang)}</loc><lastmod>${today}</lastmod>${alt(p)}</url>\n`;
+    for (const g of G) {
+      const file = `gown-${g.id}.html`;
+      sm += `  <url><loc>${loc(file, lang)}</loc><lastmod>${today}</lastmod>${alt(file)}${(g.images || []).map((id) => `<image:image><image:loc>${esc(imgUrl(id, 1400))}</image:loc></image:image>`).join("")}</url>\n`;
+    }
+  }
   fs.writeFileSync(path.join(root, "sitemap.xml"), sm + "</urlset>\n");
 
   if (dist) makeDist();
@@ -153,7 +184,14 @@ function makeDist() {
       return !/^assets\/(img|video)\/uploads\/.+\.\w+$/.test(rel) || used.has(rel.replace(/-(sm|xs)(\.\w+)$/, "$2"));
     } });
   }
+  // English pages point search engines at their Turkish twins (the source files stay untouched)
+  const S = loadSite().SITE;
+  for (const f of fs.readdirSync(DIST).filter((f) => f.endsWith(".html") && !/^gown-/.test(f) && f !== "404.html")) {
+    const file = path.join(DIST, f);
+    fs.writeFileSync(file, withLangLinks(fs.readFileSync(file, "utf8"), S.domain, f, "en"));
+  }
   stampAssets(DIST);
+  if (fs.existsSync(path.join(DIST, "tr"))) stampAssets(path.join(DIST, "tr"));
   fs.writeFileSync(path.join(DIST, "_headers"), HEADERS);
 }
 

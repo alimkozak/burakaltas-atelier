@@ -20,10 +20,24 @@
 
   /* ---------- Language ---------- */
   const LANGS = ["en", "tr"];
-  let lang = params.get("lang");
+  // Turkish pages live in /tr/ as real HTML (build.js); the page's own language always wins there
+  const FIXED = document.documentElement.dataset.lang;
+  const BASE = document.documentElement.dataset.base || "";
+  const pageFile = () => decodeURIComponent(location.pathname.split("/").pop() || "index.html");
+  const twinOf = (l) => {
+    const built = window.BUILT_TR || [];
+    if (!built.includes(pageFile())) return null;
+    const u = new URL(location.href);
+    u.searchParams.delete("lang");
+    u.pathname = u.pathname.replace(/\/(?:tr\/)?[^/]*$/, l === "tr" ? `/tr/${pageFile()}` : `/${pageFile()}`);
+    return u.href;
+  };
+  let lang = FIXED || params.get("lang");
   if (LANGS.includes(lang)) store.set("ba-lang", lang);
   else lang = store.get("ba-lang", null);
   if (!LANGS.includes(lang)) lang = (navigator.language || "en").toLowerCase().startsWith("tr") ? "tr" : "en";
+  // An English address opened by a Turkish reader (or an old ?lang=tr link): go to the Turkish page
+  if (!FIXED && lang === "tr") { const tw = twinOf("tr"); if (tw) { location.replace(tw); return; } }
   // A missing translation falls back to the other language rather than showing nothing
   const L = (o) => (o == null ? "" : typeof o === "string" ? o : o[lang] || o.en || o.tr || "");
   const t = (k, vars) => {
@@ -54,6 +68,9 @@
   }
   function setLang(l) {
     if (!LANGS.includes(l) || l === lang) return;
+    // Built site: each language has its own page — go there (keeps the address shareable and indexable)
+    const tw = twinOf(l);
+    if (tw) { store.set("ba-lang", l); location.href = tw; return; }
     const inMenu = !!document.activeElement?.closest(".menu");
     lang = l; store.set("ba-lang", l);
     // Keep a ?lang= in the address bar in sync, so a reload doesn't flip the language back
@@ -66,12 +83,13 @@
   /* ---------- Helpers ---------- */
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const isLocal = (id) => /^(assets\/|https?:|\.{0,2}\/)/.test(id);
-  const src = (id, w = 1000) => isLocal(id) ? id : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=72`;
+  const at = (p) => (/^assets\//.test(p) ? BASE + p : p);
+  const src = (id, w = 1000) => isLocal(id) ? at(id) : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=72`;
   // Photos uploaded through the admin panel come as name.jpg (1800px) and name-sm.jpg (800px); newer
   // uploads also have name-xs.jpg (480px) for phones — build.js lists which ones in window.UPLOAD_XS
   const XS = new Set(window.UPLOAD_XS || []);
   const srcset = (id) => /^assets\/img\/uploads\/.+\.(jpg|png|webp)$/.test(id)
-    ? `${XS.has(id) ? `${id.replace(/(\.\w+)$/, "-xs$1")} 480w, ` : ""}${id.replace(/(\.\w+)$/, "-sm$1")} 800w, ${id} 1800w`
+    ? `${XS.has(id) ? `${at(id.replace(/(\.\w+)$/, "-xs$1"))} 480w, ` : ""}${at(id.replace(/(\.\w+)$/, "-sm$1"))} 800w, ${at(id)} 1800w`
     : isLocal(id) ? "" : [320, 360, 480, 640, 800, 1000, 1400, 1900].map((w) => `${src(id, w)} ${w}w`).join(", ");
   const img = (id, alt, { sizes = "(min-width: 1080px) 25vw, 50vw", eager = false, w = 1000 } = {}) =>
     `<img src="${src(id, w)}" ${srcset(id) ? `srcset="${srcset(id)}" sizes="${sizes}"` : ""} alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">`;
@@ -512,7 +530,7 @@
   function videoTile(g) {
     const v = g.video;
     return `<div class="ph ph--video" data-video>
-      <video muted loop playsinline preload="none" poster="${esc(src(v.poster, 1400))}" aria-label="${esc(t("videoAlt", { name: g.name }))}"><source src="${esc(v.src)}" type="${vidType(v.src)}"></video>
+      <video muted loop playsinline preload="none" poster="${esc(src(v.poster, 1400))}" aria-label="${esc(t("videoAlt", { name: g.name }))}"><source src="${esc(at(v.src))}" type="${vidType(v.src)}"></video>
       <span class="vid__tag">${t("inMotion")}</span>
       <button type="button" class="vid__big" data-vid-play aria-label="${t("playVideo")}">${ICON.play}</button>
       <div class="vid__ctl">
@@ -580,7 +598,7 @@
     const price = S.showPrices && g.price ? `<p class="card__price">${t("from")} <b>${money(g.price)}</b></p>` : "";
     return `
     <article class="card reveal ${cls}" data-cursor="view" data-vt="${g.id}">
-      <div class="card__media"${g.video ? ` data-preview="${esc(g.video.src)}"` : ""}>
+      <div class="card__media"${g.video ? ` data-preview="${esc(at(g.video.src))}"` : ""}>
         <span class="card__no">${g.no}</span>
         ${g.concept ? `<span class="card__concept">${t("conceptTag")}</span>` : ""}
         ${g.video ? `<span class="card__vid" title="${t("hasVideo")}">${ICON.play}<span class="sr-only">${t("hasVideo")}</span></span>` : ""}

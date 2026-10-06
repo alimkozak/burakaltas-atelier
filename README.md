@@ -203,6 +203,14 @@ Model sayfaları, sitemap, `built.js` ve `fx.js` **depoda tutulmaz**. Panel ve �
 
 **Yayına alma:** Netlify'ı GitHub deposuna bağlarsanız `netlify.toml` gereken ayarı içerir: `node build.js --yayin` çalıştırır ve `yayin` klasörünü yayınlar. Her `main` güncellemesinde site kendiliğinden güncellenir.
 
+## Türkçe sayfalar ve Google
+Site iki dilde **ayrı adreslerle** yayınlanır: İngilizce `burakaltas.com/collection.html`, Türkçe `burakaltas.com/tr/collection.html`.
+
+- **Google Türkçeyi de görür.** Türkçe sayfalar `build.js` ile hazır HTML olarak üretilir. Google ve WhatsApp ya da Instagram link önizlemeleri Türkçe başlık ve açıklamayı görür. Önceden Türkçe metin yalnızca tarayıcıda, JavaScript ile yazılıyordu ve Google'a görünmüyordu.
+- **İki dil birbirine bağlıdır.** Her sayfa "bu sayfanın diğer dili şurada" bilgisini (hreflang) taşır. Site haritasında iki dil birlikte yer alır.
+- **Dil düğmesi ikiz sayfaya geçer.** Türkçe tarayıcıyla İngilizce bir adrese gelen ziyaretçi Türkçe sayfaya yönlenir. Eski `?lang=tr` linkleri de çalışır.
+- **Çeviriler tek yerden gelir.** Türkçe metinler yine `assets/js/i18n.js` dosyasındadır. Türkçe sayfaların başlık ve açıklamaları `build-tr.js` içindedir. `tr/` klasörü her build'de yeniden üretilir, elle düzenlemeyin.
+
 ## Teknik notlar (yazılımcı için)
 - Veriler `assets/js/data.js` ve `assets/js/config.js` dosyalarındadır. Panel bu dosyaları yazar; elle de düzenlenebilir.
 - Elle düzenlemeden sonra şunu çalıştırın: `node build.js` (yayın klasörü için `node build.js --yayin`).

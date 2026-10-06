@@ -5,6 +5,8 @@
    ========================================================================== */
 (() => {
   "use strict";
+  // app.js may have just sent a Turkish reader to the /tr/ page — nothing to set up here then
+  if (!window.BA) return;
   const BA = window.BA, S = window.SITE, A = S.appointments;
   const { $, $$, t, L, esc, isoDate, wa, store, toast, onLang, fmtDate, byId, params, ICON } = BA;
   const lang = BA.lang;

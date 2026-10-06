@@ -345,7 +345,7 @@ const clientIp = (req) => String(req.headers["cf-connecting-ip"] || req.socket.r
 const tooMany = (ip) => (failures.get(ip) || []).filter((t) => t > Date.now() - 15 * 60e3).length >= 8;
 const samePassword = (a) => { const x = Buffer.from(String(a)), y = Buffer.from(PASSWORD); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 // Remote users reach only the panel, its API and the public site — never README, scripts or backups
-const remoteAllowed = (rel) => /^\/(admin(\/.*)?|api\/[\w-]+|[\w-]+\.html|assets\/[\w\-./]+|favicon\.svg|apple-touch-icon\.png|site\.webmanifest|robots\.txt|sitemap\.xml)?$/.test(rel) && !rel.includes("..");
+const remoteAllowed = (rel) => /^\/(admin(\/.*)?|api\/[\w-]+|(tr\/)?[\w-]+\.html|tr\/|assets\/[\w\-./]+|favicon\.svg|apple-touch-icon\.png|site\.webmanifest|robots\.txt|sitemap\.xml)?$/.test(rel) && !rel.includes("..");
 
 const loginPage = (msg = "") => `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Giriş — Admin</title>
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f2eb;color:#1b1714;font:16px/1.5 system-ui,sans-serif}form{width:min(360px,calc(100% - 32px));display:grid;gap:14px;padding:32px 28px;background:#fcfaf6;border:1px solid rgba(27,23,20,.14);border-radius:12px}

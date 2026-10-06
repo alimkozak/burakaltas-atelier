@@ -21,13 +21,13 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 
 // Same files that go into the "yayin" folder — nothing else is reachable
 const isPublic = (rel) =>
-  /^[\w-]+\.html$/.test(rel) || /^assets\/[\w\-./]+$/.test(rel) || ["favicon.svg", "apple-touch-icon.png", "site.webmanifest", "robots.txt", "sitemap.xml"].includes(rel);
+  /^(tr\/)?[\w-]+\.html$/.test(rel) || rel === "tr/" || /^assets\/[\w\-./]+$/.test(rel) || ["favicon.svg", "apple-touch-icon.png", "site.webmanifest", "robots.txt", "sitemap.xml"].includes(rel);
 
 function serve(req, res) {
   if (req.method !== "GET" && req.method !== "HEAD") { res.writeHead(405); return res.end(); }
   let rel;
   try { rel = decodeURIComponent(req.url.split("?")[0]).replace(/^\/+/, ""); } catch { res.writeHead(400); return res.end(); }
-  if (rel === "") rel = "index.html";
+  if (rel === "" || rel.endsWith("/")) rel += "index.html";
   const file = path.normalize(path.join(ROOT, rel));
   const headers = {
     // Changes saved in the admin panel must show up on Burak's phone at once

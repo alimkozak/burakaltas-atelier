@@ -34,6 +34,17 @@ Panel kaydettiğiniz anda siteyi günceller: model sayfaları, paylaşım önizl
 - Safari ile açsın. Paylaş › **Ana Ekrana Ekle** yaparsa site, BA simgesiyle uygulama gibi açılır.
 - Pil tasarrufu (Düşük Güç Modu) açıksa iPhone videoları kendiliğinden oynatmaz; oynat düğmesine basınca oynar. Bu normaldir.
 
+## Burak'a (ya da ekibe) admin panelini uzaktan açmak
+**`Burak'a Admin Paneli.bat`** dosyasına çift tıklayın. 10–20 saniye içinde pencerede bir **link** ve bir **şifre** çıkar. İkisi birlikte panoya kopyalanır; WhatsApp'tan Burak'a yapıştırın.
+
+- **Telefondan da çalışır.** Burak linki açar, şifreyi girer ve paneli sizin gibi kullanır: model ekleme, fotoğraf ve video yükleme, ayarlar, yayınlama.
+- **Şifre her açılışta yeniden üretilir.** Pencere kapanınca link de şifre de geçersiz olur. Sekiz hatalı denemeden sonra o bağlantıdan 15 dakika giriş yapılamaz.
+- **Uzaktan yalnızca panel ve site açılır.** README, betikler ve yedekler kapalıdır. "Klasörü göster" düğmesi yalnızca sizin bilgisayarınızda çalışır.
+- **Aynı anda çalışabilirsiniz.** Siz kendi panelinizi (`Admin Paneli.bat`) açık tutarken Burak uzaktan çalışabilir. İkiniz aynı anda kaydederseniz panel bunu fark eder: ikinci kaydı reddeder, "Bu arada başka biri de kaydetti, sayfayı yenileyin" der. Kimsenin işi sessizce silinmez.
+- **Değişiklikler gerçek dosyalara yazılır.** Burak'ın panelde yaptığı her şey sizin bilgisayarınızdaki siteyi değiştirir. Yanlışlık olursa eski hali `.yedek` klasöründedir; Git kullanıyorsanız `git diff` ile de görebilirsiniz.
+
+Bu, test ve küçük ekip için geçici bir çözümdür. Kalıcı çözüm, sunucuda kullanıcı adı, şifre ve rollerle çalışan paneldir (2. aşama).
+
 ## Siteyi internette güncellemek
 1. Panelde **Yayınla › Yayın klasörünü hazırla**'ya basın.
 2. **"yayin" klasörünü göster** ile klasörü açın.

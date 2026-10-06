@@ -27,13 +27,35 @@
     const t = $("#toast"); t.textContent = msg; t.classList.toggle("err", !!err); t.classList.add("is-on");
     clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("is-on"), err ? 6000 : 3200);
   }
+  // Saves carry the version of the data they were based on, so two people editing at once
+  // can't silently overwrite each other (the server answers 409 if someone saved in between)
+  const VER_OF = { gowns: "data", designer: "data", reviews: "data", config: "config" };
   async function post(route, body) {
-    const r = await fetch(`/api/${route}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const vk = VER_OF[route];
+    const payload = vk && DB.ver ? { ...body, ver: DB.ver[vk] } : body;
+    const r = await fetch(`/api/${route}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const j = await r.json().catch(() => ({}));
+    if (r.status === 401 && j.login) { dirty = false; location.href = "/giris"; }
+    if (r.status === 409) showConflict();
     if (!r.ok) throw new Error(j.error || "Kaydedilemedi");
+    if (j.ver) DB.ver = j.ver;
     return j;
   }
-  async function reload() { DB = await (await fetch("/api/data", { cache: "no-store" })).json(); }
+  function showConflict() {
+    if ($("#conflict")) return;
+    const bar = document.createElement("div");
+    bar.id = "conflict"; bar.className = "conflict"; bar.setAttribute("role", "alert");
+    bar.innerHTML = `<span><b>Bu arada başka biri de kaydetti.</b> Sizin son değişikliğiniz kaydedilmedi; onun işini silmemek için sayfayı yenileyip değişikliğinizi tekrar yapın.</span><button type="button" class="btn btn--sm">Sayfayı yenile</button>`;
+    bar.querySelector("button").onclick = () => { dirty = false; location.reload(); };
+    document.body.append(bar);
+  }
+  async function reload() {
+    const r = await fetch("/api/data", { cache: "no-store" });
+    if (r.status === 401) { location.href = "/giris"; return; }
+    DB = await r.json();
+    // Remote session: show who is connected and a way to sign out
+    if (DB.remote && !$(".side__remote")) $(".side__site")?.insertAdjacentHTML("afterend", `<a class="side__site side__remote" href="/cikis">Uzaktan bağlısınız · Çıkış</a>`);
+  }
   const markDirty = () => { dirty = true; const m = $(".savebar .msg"); if (m) { m.textContent = "Kaydedilmemiş değişiklikler var"; m.classList.remove("err"); } };
   addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 

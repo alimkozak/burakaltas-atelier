@@ -12,8 +12,12 @@ const path = require("path");
 const { exec } = require("child_process");
 const { build, loadSite, refreshRates } = require("./build.js");
 
+const crypto = require("crypto");
 const ROOT = __dirname;
-const PORT = Number(process.env.PORT) || 5600;
+// REMOTE=1 ("Burak'a Admin Paneli.bat"): opens the panel to the internet through a temporary
+// Cloudflare link, behind a password. It runs on its own port, so the local panel can stay open too.
+const REMOTE = !!process.env.REMOTE;
+const PORT = Number(process.env.PORT) || (REMOTE ? 5601 : 5600);
 const HOST = "127.0.0.1";
 const IMG_DIR = path.join(ROOT, "assets", "img", "uploads");
 const VID_DIR = path.join(ROOT, "assets", "video", "uploads");
@@ -170,16 +174,28 @@ const cleanExtras = (o = {}) => Object.fromEntries(EXTRA_KEYS.map((k) => {
   return [k, v === "" || v === null || v === undefined || !Number.isFinite(+v) ? null : Math.max(0, Math.round(+v))];
 }));
 
+/* ---------- Two people editing at once ----------
+   Every save carries the version of the file it was based on. If someone else saved in the
+   meantime, the save is refused instead of silently overwriting their work. */
+const hashFile = (rel) => { try { return crypto.createHash("sha1").update(fs.readFileSync(path.join(ROOT, rel))).digest("hex").slice(0, 12); } catch { return ""; } };
+const versions = () => ({ data: hashFile("assets/js/data.js"), config: hashFile("assets/js/config.js") });
+const VERSIONED = { gowns: "data", designer: "data", reviews: "data", config: "config" };
+
 /* ---------- API ---------- */
-async function api(req, res, route) {
+async function api(req, res, route, remote) {
   const W = loadSite();
   if (req.method === "GET" && route === "data") {
-    return send(res, 200, { site: W.SITE, collections: W.COLLECTIONS, gowns: W.GOWNS, media: W.MEDIA, reviews: W.REVIEWS || [], designer: W.DESIGNER || {} });
+    return send(res, 200, { site: W.SITE, collections: W.COLLECTIONS, gowns: W.GOWNS, media: W.MEDIA, reviews: W.REVIEWS || [], designer: W.DESIGNER || {}, ver: versions(), remote });
   }
   if (req.method !== "POST") return send(res, 405, { error: "Yöntem desteklenmiyor" });
   // Videos are streamed straight to disk (too big to send as JSON)
   if (route === "upload-video") return uploadVideo(req, res);
   const body = await readBody(req);
+  const vk = VERSIONED[route];
+  if (vk && (body.ver || remote) && body.ver !== versions()[vk]) {
+    return send(res, 409, { error: "Bu arada başka biri de kaydetti. Değişikliğinizi kaybetmemek için sayfayı yenileyin ve tekrar yapın.", conflict: true });
+  }
+  if (route === "open-folder" && remote) return send(res, 403, { error: "Klasör yalnızca bilgisayardaki panelden açılabilir" });
 
   if (route === "gowns") {
     const list = (body.gowns || []).map((g) => cleanGown(g, W.COLLECTIONS));
@@ -249,7 +265,7 @@ async function api(req, res, route) {
     return send(res, 404, { error: "Bilinmeyen işlem" });
   }
   const r = build();
-  send(res, 200, { ok: true, ...r });
+  send(res, 200, { ok: true, ...r, ver: versions() });
 }
 
 function uploadVideo(req, res) {
@@ -306,18 +322,83 @@ function serveStatic(req, res, urlPath) {
   });
 }
 
+/* ---------- Remote access: password login (only in REMOTE mode) ---------- */
+// A fresh password every start, easy to read out on the phone: e.g. "k7m2-q9xa-4fhd"
+const makePassword = () => {
+  const abc = "abcdefghjkmnpqrstuvwxyz23456789";
+  return [0, 1, 2].map(() => Array.from(crypto.randomBytes(4), (b) => abc[b % abc.length]).join("")).join("-");
+};
+const PASSWORD = REMOTE ? (process.env.ADMIN_PASSWORD || makePassword()) : "";
+const SESSION_H = 12;
+const sessions = new Map(); // token -> expiry (ms)
+const failures = new Map(); // ip -> [timestamps]
+const cookieOf = (req) => (/(?:^|;\s*)ba_s=([a-f0-9]{48})/.exec(req.headers.cookie || "") || [])[1];
+const signedIn = (req) => { const t = cookieOf(req), exp = t && sessions.get(t); if (exp && exp > Date.now()) return true; if (t) sessions.delete(t); return false; };
+// Requests through the tunnel carry Cloudflare's headers; ones typed on this PC don't
+const isRemoteReq = (req) => !!(req.headers["cf-connecting-ip"] || req.headers["cf-ray"] || req.headers["x-forwarded-for"]) ||
+  !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || "");
+const clientIp = (req) => String(req.headers["cf-connecting-ip"] || req.socket.remoteAddress || "?");
+const tooMany = (ip) => (failures.get(ip) || []).filter((t) => t > Date.now() - 15 * 60e3).length >= 8;
+const samePassword = (a) => { const x = Buffer.from(String(a)), y = Buffer.from(PASSWORD); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+// Remote users reach only the panel, its API and the public site — never README, scripts or backups
+const remoteAllowed = (rel) => /^\/(admin(\/.*)?|api\/[\w-]+|[\w-]+\.html|assets\/[\w\-./]+|favicon\.svg|apple-touch-icon\.png|site\.webmanifest|robots\.txt|sitemap\.xml)?$/.test(rel) && !rel.includes("..");
+
+const loginPage = (msg = "") => `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Giriş — Admin</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f2eb;color:#1b1714;font:16px/1.5 system-ui,sans-serif}form{width:min(360px,calc(100% - 32px));display:grid;gap:14px;padding:32px 28px;background:#fcfaf6;border:1px solid rgba(27,23,20,.14);border-radius:12px}
+h1{margin:0;font:400 1.6rem Georgia,serif}p{margin:0;color:#6b6056;font-size:.92rem}input{font:inherit;font-size:18px;padding:12px 14px;border:1px solid rgba(27,23,20,.3);border-radius:8px;letter-spacing:.06em}button{font:inherit;padding:13px;border:0;border-radius:8px;background:#1b1714;color:#f7f2eb;cursor:pointer}.e{color:#9c3b2f}</style></head>
+<body><form method="post" action="/giris"><h1>B<i>A</i> · Admin paneli</h1><p>Alim'in gönderdiği şifreyi girin.</p>${msg ? `<p class="e">${msg}</p>` : ""}
+<input name="sifre" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required autofocus aria-label="Şifre"><button>Giriş yap</button></form></body></html>`;
+
+function handleLogin(req, res) {
+  if (req.method === "GET") return send(res, 200, loginPage(), TYPES[".html"]);
+  const ip = clientIp(req);
+  if (tooMany(ip)) return send(res, 429, loginPage("Çok fazla hatalı deneme. 15 dakika sonra tekrar deneyin."), TYPES[".html"]);
+  let raw = "";
+  req.on("data", (c) => { raw += c; if (raw.length > 2000) req.destroy(); });
+  req.on("end", () => {
+    const pw = new URLSearchParams(raw).get("sifre") || "";
+    if (!samePassword(pw.trim()) && !samePassword(pw.trim().toLowerCase())) {
+      failures.set(ip, [...(failures.get(ip) || []), Date.now()]);
+      return send(res, 401, loginPage("Şifre hatalı."), TYPES[".html"]);
+    }
+    failures.delete(ip);
+    const token = crypto.randomBytes(24).toString("hex");
+    sessions.set(token, Date.now() + SESSION_H * 3600e3);
+    res.writeHead(303, { Location: "/admin", "Set-Cookie": `ba_s=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${SESSION_H * 3600}`, "Cache-Control": "no-store" });
+    res.end();
+  });
+}
+
 // Model pages, sitemap etc. are not kept in Git — make sure they exist and are current
 try { build(); } catch (e) { console.log(`\n  ! Sayfalar üretilemedi: ${e.message}\n`); }
 
 const server = http.createServer(async (req, res) => {
   try {
+    const rel = decodeURIComponent(req.url.split("?")[0]);
+    const remote = REMOTE && isRemoteReq(req);
+    if (remote) {
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
+      res.setHeader("X-Frame-Options", "DENY");
+      res.setHeader("Referrer-Policy", "same-origin");
+      if (rel === "/giris") return handleLogin(req, res);
+      if (rel === "/cikis") { sessions.delete(cookieOf(req)); res.writeHead(303, { Location: "/giris", "Set-Cookie": "ba_s=; Path=/; Max-Age=0" }); return res.end(); }
+      if (!signedIn(req)) {
+        if (rel.startsWith("/api/")) return send(res, 401, { error: "Oturum kapandı — lütfen yeniden giriş yapın", login: true });
+        res.writeHead(303, { Location: "/giris" }); return res.end();
+      }
+      if (!remoteAllowed(rel)) return send(res, 404, "Bulunamadı", "text/plain; charset=utf-8");
+    }
     // Only same-origin browser requests may change data
     if (req.method === "POST") {
       const origin = req.headers.origin || "";
-      if (origin && origin !== `http://localhost:${PORT}` && origin !== `http://${HOST}:${PORT}`) return send(res, 403, { error: "İzin yok" });
+      const ok = [`http://localhost:${PORT}`, `http://${HOST}:${PORT}`, ...(remote ? [`https://${req.headers.host}`] : [])];
+      // Through the tunnel the page's own origin is its trycloudflare address (the session cookie
+      // is SameSite=Strict as well, so other sites can't post with it)
+      const tunnelOrigin = remote && /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/.test(origin);
+      if (origin && !ok.includes(origin) && !tunnelOrigin) return send(res, 403, { error: "İzin yok" });
     }
-    const m = /^\/api\/([\w-]+)$/.exec(req.url.split("?")[0]);
-    if (m) return await api(req, res, m[1]);
+    const m = /^\/api\/([\w-]+)$/.exec(rel);
+    if (m) return await api(req, res, m[1], remote);
     serveStatic(req, res, req.url);
   } catch (e) {
     send(res, 400, { error: e.message || String(e) });
@@ -326,10 +407,28 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   const url = `http://localhost:${PORT}/admin`;
-  console.log(`\n  Burak Altaş Atelier — Admin paneli hazır\n  Panel:   ${url}\n  Site:    http://localhost:${PORT}/\n  Kapatmak için bu pencereyi kapatın (ya da Ctrl+C).\n`);
+  console.log(`\n  Burak Altaş Atelier — Admin paneli hazır${REMOTE ? " (uzaktan erişim)" : ""}\n  Panel:   ${url}\n  Site:    http://localhost:${PORT}/\n  Kapatmak için bu pencereyi kapatın (ya da Ctrl+C).\n`);
   if (!process.env.NO_OPEN) {
     const cmd = process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
     exec(cmd);
+  }
+  if (REMOTE && !process.env.NO_TUNNEL) {
+    const tunnel = require("./tunnel.js");
+    tunnel.startTunnel(PORT, (link) => {
+      tunnel.copy(`Admin paneli: ${link}/admin\nŞifre: ${PASSWORD}`);
+      console.log(`
+  ┌──────────────────────────────────────────────────────────────┐
+     Burak'a gönderilecekler (ikisi birlikte panoya kopyalandı):
+
+     Link:   ${link}/admin
+     Şifre:  ${PASSWORD}
+  └──────────────────────────────────────────────────────────────┘
+  • Panelde yapılan her değişiklik sitenizi değiştirir — Burak'a buna göre söyleyin.
+  • Siz de aynı anda kendi panelinizi kullanabilirsiniz; aynı anda kaydedilirse
+    panel çakışmayı fark eder ve kimsenin işi kaybolmaz.
+  • Şifre ve link yalnızca bu pencere açıkken geçerlidir. Kapatınca erişim biter.
+`);
+    });
   }
 });
 server.on("error", (e) => {

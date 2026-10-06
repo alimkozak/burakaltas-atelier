@@ -11,7 +11,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const { spawn, exec } = require("child_process");
+const tunnel = require("./tunnel.js");
 
 const ROOT = __dirname;
 const PORT = Number(process.env.PREVIEW_PORT) || 5700;
@@ -58,26 +58,9 @@ function serve(req, res) {
   });
 }
 
-function findCloudflared() {
-  const tries = [
-    process.env.CLOUDFLARED,
-    "C:\\Program Files (x86)\\cloudflared\\cloudflared.exe",
-    "C:\\Program Files\\cloudflared\\cloudflared.exe",
-    path.join(process.env.LOCALAPPDATA || "", "Microsoft", "WinGet", "Links", "cloudflared.exe")
-  ].filter(Boolean);
-  return tries.find((p) => fs.existsSync(p)) || "cloudflared";
-}
-
 function startTunnel() {
-  console.log("  İnternet linki hazırlanıyor (10–20 saniye)…");
-  const cf = spawn(findCloudflared(), ["tunnel", "--no-autoupdate", "--url", `http://${HOST}:${PORT}`], { windowsHide: true });
-  let shown = false;
-  const watch = (buf) => {
-    const m = !shown && /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(buf.toString());
-    if (!m) return;
-    shown = true;
-    const url = m[0];
-    if (process.platform === "win32") { const c = exec("clip"); c.stdin.end(url); }
+  tunnel.startTunnel(PORT, (url) => {
+    tunnel.copy(url);
     console.log(`
   ┌──────────────────────────────────────────────────────────────┐
      Burak'a gönderilecek link (panoya kopyalandı, yapıştırın):
@@ -91,16 +74,7 @@ function startTunnel() {
     (Burak sayfayı yenilesin).
   • Kapatmak için bu pencereyi kapatın (ya da Ctrl+C).
 `);
-  };
-  cf.stdout.on("data", watch);
-  cf.stderr.on("data", watch);
-  cf.on("error", () => {
-    console.log("\n  ! cloudflared bulunamadı. Kurmak için PowerShell'de şunu çalıştırın:\n    winget install --id Cloudflare.cloudflared\n  Site yalnızca bu bilgisayarda açık: http://localhost:" + PORT + "\n");
   });
-  cf.on("exit", (code) => { if (shown || code) console.log("\n  Tünel kapandı. Linki yenilemek için bu dosyayı yeniden çalıştırın."); process.exit(0); });
-  const stop = () => { cf.kill(); process.exit(0); };
-  process.on("SIGINT", stop);
-  process.on("SIGTERM", stop);
 }
 
 // Model pages, sitemap etc. are not kept in Git — make sure they exist and are current

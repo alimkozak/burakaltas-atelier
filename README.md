@@ -16,7 +16,7 @@ Paneldeki sekmeler:
 | **Tasarımcı** | Burak'ın sayfası (`designer.html`): portre, atölye fotoğrafı, hikâye, alıntı, rakamlar, basın. Boş alanlar sitede görünmez. |
 | **Gelin yorumları** | Gerçek yorumları ekleyin, sıralayın, silin. Yoruma gelinin fotoğrafını ekleyebilirsiniz. "Giydiği model" alanı bir modelin adıyla aynıysa, yorum o modelin sayfasında **"… modelini giyen gelinler"** bölümünde de görünür. |
 | **Ayarlar** | WhatsApp, e-posta, Etsy, Instagram, adres, çalışma saatleri, online randevu gün ve saatleri, **kişiselleştirme ücretleri**, **canlı sohbet**, **ziyaretçi istatistikleri**, fiyatları göster/gizle. |
-| **Yayınla** | İnternete yüklenecek **`yayin`** klasörünü hazırlar. |
+| **Yayınla** | Üstte **Yayına hazırlık** listesi bulunur. Yayından önce eksik olanları kendisi bulur: örnek fotoğraflar, Etsy linkleri, örnek yorumlar, boş tasarımcı sayfası, teyit bekleyen metinler. Her maddede "Düzelt →" bağlantısı vardır. Altta internete yüklenecek **`yayin`** klasörünü hazırlama adımları yer alır. |
 
 Panel kaydettiğiniz anda siteyi günceller: model sayfaları, paylaşım önizlemeleri ve sitemap kendiliğinden üretilir. Her kayıttan önce eski veriler **`.yedek`** klasörüne kopyalanır; yanlışlıkla silinen bir şey oradan geri alınabilir.
 

@@ -180,3 +180,19 @@ button { cursor: pointer; }
 .igpost__meta { font-size: .74rem; color: var(--mute); }
 .igpost__cap { font-size: .82rem; line-height: 1.4; max-height: 4.2em; overflow: hidden; }
 .note--err { color: #9c3b2f; }
+
+/* Launch readiness checklist */
+.ready__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.ready__score { font-family: var(--serif); font-size: 1.6rem; color: #a0522d; }
+.ready__score.is-done { color: #2e7d4f; }
+.ready__group { margin: 18px 0 6px; font-size: .72rem; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--mute); }
+.ready__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ready__item { display: grid; grid-template-columns: 28px 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.ready__icon { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: .8rem; }
+.is-ok .ready__icon { background: #e3f2e8; color: #2e7d4f; }
+.is-todo .ready__icon { background: #fbe9dc; color: #a0522d; }
+.is-opt .ready__icon { background: #f1ede6; color: var(--mute); }
+.ready__txt { display: grid; gap: 2px; min-width: 0; }
+.ready__txt small { color: var(--mute); overflow-wrap: anywhere; }
+.ready__check { display: inline-flex; gap: 6px; align-items: center; font-size: .85rem; white-space: nowrap; }
+@media (max-width: 640px) { .ready__item { grid-template-columns: 28px 1fr; } .ready__item > :nth-child(n+3) { grid-column: 2; justify-self: start; } }

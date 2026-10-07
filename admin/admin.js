@@ -643,9 +643,67 @@
   /* ======================================================================
      YAYINLA
      ====================================================================== */
+  /* ---------- Launch readiness: what still stands between the site and going live ---------- */
+  const CHECKS_KEY = "ba-admin-checks";
+  const manual = () => { try { return JSON.parse(localStorage.getItem(CHECKS_KEY) || "{}"); } catch { return {}; } };
+  function readiness() {
+    const S = DB.site, live = DB.gowns.filter((g) => !g.draft), drafts = DB.gowns.length - live.length, m = manual();
+    const n = (arr) => arr.length, names = (arr) => arr.slice(0, 4).map((g) => g.name).join(", ") + (arr.length > 4 ? "…" : "");
+    const sample = live.filter((g) => g.images.some((x) => !/^assets\//.test(x)));
+    const noEtsy = live.filter((g) => !g.etsy), noEn = live.filter((g) => !(g.story && g.story.en)), noPrice = live.filter((g) => !(g.price > 0));
+    const sampleReviews = ["Elif", "Sarah", "Layla", "Anna"].every((nm) => (DB.reviews || []).some((r) => r.name === nm));
+    const D = DB.designer || {}, designerOk = !!(D.photo && D.bio && (D.bio.tr || D.bio.en));
+    const ok = (x) => (x ? "ok" : "todo");
+    const groups = [
+      ["Katalog", [
+        { st: ok(!n(sample)), t: "Gerçek fotoğraflar", d: n(sample) ? `${n(sample)} modelde örnek (Unsplash) fotoğraf var: ${names(sample)}` : "Tüm modeller kendi fotoğraflarınızla", go: "#modeller" },
+        { st: ok(!n(noPrice)), t: "Fiyatlar", d: n(noPrice) ? `${n(noPrice)} modelin fiyatı yok: ${names(noPrice)}` : "Tüm modellerin fiyatı var", go: "#modeller" },
+        { st: ok(!n(noEtsy)), t: "Etsy ilan linkleri", d: n(noEtsy) ? `${n(noEtsy)} modelde Etsy linki yok — buton mağaza ana sayfasına gider` : "Her model kendi ilanına gidiyor", go: "#modeller" },
+        { st: ok(!n(noEn)), t: "İngilizce açıklamalar", d: n(noEn) ? `${n(noEn)} modelde İngilizce hikâye yok: ${names(noEn)}` : "Tüm modeller iki dilde", go: "#modeller" },
+        { st: drafts ? "todo" : "ok", t: "Taslaklar", d: drafts ? `${drafts} taslak kontrol bekliyor (sitede görünmüyorlar)` : "Bekleyen taslak yok", go: "#modeller" },
+        { st: live.some((g) => g.video) ? "ok" : "opt", t: "Videolar", d: live.some((g) => g.video) ? `${live.filter((g) => g.video).length} modelin videosu var` : "İsteğe bağlı — hareket halindeki gelinlik en çok satan içerik", go: "#modeller" }
+      ]],
+      ["İçerik", [
+        { st: ok(!sampleReviews), t: "Gelin yorumları", d: sampleReviews ? "Örnek yorumlar (Elif, Sarah, Layla, Anna) duruyor — izin alarak gerçekleriyle değiştirin" : "Gerçek yorumlar girilmiş", go: "#yorumlar" },
+        { st: ok(designerOk), t: "Tasarımcı sayfası", d: designerOk ? "Portre ve hikâye girilmiş" : "Burak'ın portresi ve hikâyesi eksik — sayfa şu an boş görünüyor", go: "#tasarimci" }
+      ]],
+      ["Bilgiler — elle teyit", [
+        { k: "email", t: "E-posta adresi", d: `${S.email} — alan adı alınınca bu adres kurulmalı ya da gerçek adres yazılmalı`, go: "#ayarlar" },
+        { k: "etsy", t: "Etsy mağaza linki", d: S.etsyShop, go: "#ayarlar" },
+        { k: "domain", t: "Alan adı", d: `${S.domain} — satın alındı ve bu adres doğru`, go: "#ayarlar" },
+        { k: "policies", t: "Gizlilik & koşullar sayfası Burak ile okundu", d: "İade/tadilat, verilerin saklanma süresi, üretim ve kargo süreleri" },
+        { k: "measure", t: "Ölçü kartı ifadeleri teyit edildi", d: "Bolluk payı, topuk yüksekliği, \"2 kg / 2 cm değişirse yeniden ölçün\"" },
+        { k: "numbers", t: "Ana sayfadaki rakamlar teyit edildi", d: "Örn. işçilik saatleri ve inci sayıları" },
+        { k: "consent", t: "Gerçek gelin fotoğrafları için izin alındı", d: "Site ve Instagram için yazılı onay (KVKK)" }
+      ]],
+      ["İsteğe bağlı", [
+        { st: S.chat && S.chat.tawkPropertyId ? "ok" : "opt", t: "Canlı sohbet (Tawk.to)", d: S.chat && S.chat.tawkPropertyId ? "Açık" : "Kapalı — gelinler yalnızca WhatsApp'tan yazabilir", go: "#ayarlar" },
+        { st: S.analytics && S.analytics.cloudflareToken ? "ok" : "opt", t: "Ziyaretçi istatistikleri", d: S.analytics && S.analytics.cloudflareToken ? "Açık" : "Kapalı — kaç kişinin geldiğini göremezsiniz", go: "#ayarlar" },
+        { st: S.appointments && S.appointments.calcomUser ? "ok" : "opt", t: "Otomatik takvim (Cal.com)", d: S.appointments && S.appointments.calcomUser ? "Açık" : "Kapalı — randevu talepleri WhatsApp'a düşüyor", go: "#ayarlar" },
+        { st: S.extras && Object.values(S.extras).some((v) => v !== null) ? "ok" : "opt", t: "Kişiselleştirme ücretleri", d: S.extras && Object.values(S.extras).some((v) => v !== null) ? "Girilmiş" : "Girilmemiş — seçeneklerde ücret yazmıyor", go: "#ayarlar" }
+      ]]
+    ].map(([title, items]) => [title, items.map((x) => (x.k ? { ...x, st: m[x.k] ? "ok" : "todo" } : x))]);
+    const req = groups.flatMap(([, items]) => items).filter((x) => x.st !== "opt");
+    const done = req.filter((x) => x.st === "ok").length;
+    const icon = { ok: "✓", todo: "!", opt: "○" };
+    return `
+      <section class="card ready">
+        <div class="ready__head"><h2>Yayına hazırlık</h2><span class="ready__score ${done === req.length ? "is-done" : ""}">${done} / ${req.length}</span></div>
+        <p class="hint">${done === req.length ? "Her şey hazır — siteyi yayına alabilirsiniz." : "Siteyi yayına almadan önce tamamlanması gerekenler. Otomatik maddeler siz düzelttikçe kendiliğinden işaretlenir."}</p>
+        ${groups.map(([title, items]) => `<h3 class="ready__group">${title}</h3><ul class="ready__list">${items.map((x) => `
+          <li class="ready__item is-${x.st}">
+            <span class="ready__icon" aria-hidden="true">${icon[x.st]}</span>
+            <span class="ready__txt"><b>${esc(x.t)}</b><small>${esc(x.d || "")}</small></span>
+            ${x.k ? `<label class="ready__check"><input type="checkbox" data-check="${x.k}" ${m[x.k] ? "checked" : ""}> Tamam</label>` : ""}
+            ${x.go && x.st !== "ok" ? `<a class="btn btn--sm btn--ghost" href="${x.go}">Düzelt →</a>` : ""}
+          </li>`).join("")}</ul>`).join("")}
+      </section>`;
+  }
+
   function renderPublish() {
     view.innerHTML = `
       <div class="head"><div><h1>Yayınla</h1><p>Panelde yaptığınız her şey bu bilgisayarda kayıtlı. İnternetteki siteyi güncellemek için yayın klasörünü hazırlayıp Netlify'a yükleyin.</p></div></div>
+      ${readiness()}
       <section class="card">
         <ol class="steps">
           <li><b>Yayın klasörünü hazırlayın</b><p>Sadece sitenin dosyalarını içeren "yayin" klasörü oluşturulur (admin paneli ve notlar dahil edilmez).<br><button class="btn" data-pub style="margin-top:10px">Yayın klasörünü hazırla</button></p></li>
@@ -654,6 +712,12 @@
         </ol>
         <p class="note" id="pubres" hidden></p>
       </section>`;
+    view.onchange = (e) => {
+      const c = e.target.closest("[data-check]"); if (!c) return;
+      const m = manual(); m[c.dataset.check] = c.checked;
+      try { localStorage.setItem(CHECKS_KEY, JSON.stringify(m)); } catch {}
+      renderPublish();
+    };
     view.onclick = async (e) => {
       if (e.target.closest("[data-pub]")) {
         try { const r = await post("publish", {}); const n = $("#pubres"); n.hidden = false; n.className = "note note--ok"; n.textContent = `Hazır: ${r.gowns} model sayfası dahil. Klasör: ${r.dist}`; }
@@ -826,7 +890,7 @@
     const h = decodeURIComponent(location.hash.slice(1)) || "modeller";
     const tab = h.startsWith("model") || h.startsWith("yeni") ? "modeller" : h;
     $$(".side__nav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-    view.onclick = null;
+    view.onclick = null; view.onchange = null;
     if (h.startsWith("model=")) renderEditor(h.slice(6));
     else if (h.startsWith("yeni")) renderEditor(null, h.split("=")[1]);
     else if (h === "tasarimci") renderDesigner();

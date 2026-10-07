@@ -29,8 +29,15 @@ window.SITE = {
     "neckHigher": null,
     "neckIllusion": null
   },
-  // Kargo ücreti (USD). null = "teklifte netleşir" yazar
+  // Kargo ücreti (USD). Artık sitede gösterilmiyor (kargo mağazanın koşullarına göre)
   shipping: null,
+  // Diğer mağazalar (Etsy dışında). Her model için ayrı ilan linki de girilebilir.
+  stores: [
+    {
+      "name": "Trendyol",
+      "url": ""
+    }
+  ],
   currency: "USD",
   // Form gönderimi için (isteğe bağlı) formspree.io form ID'si. Boşsa form WhatsApp'a yönlenir.
   formspreeId: "",

@@ -1079,6 +1079,8 @@ html[lang="tr"] .hide-tr { display: none; }
 .gown__concept { margin: 14px 0 0; padding: 12px 14px; border-left: 2px solid var(--gold-deep); background: var(--paper); font-size: .9rem; color: var(--ink-2); }
 .gown__concept b { display: block; font-weight: 500; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 2px; }
 
+.gown__stores { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; margin: 2px 0 0; font-size: .88rem; color: var(--ink-2); }
+.gown__stores a { color: var(--ink); text-underline-offset: 3px; }
 .modest-hint { margin: 0 0 18px; padding: 12px 14px; border-left: 2px solid var(--gold-deep); background: var(--paper); font-size: .92rem; color: var(--ink-2); }
 .opts__note { color: var(--gold-deep); }
 .card__price .gown__fx { font-size: .9em; text-transform: none; letter-spacing: 0; }

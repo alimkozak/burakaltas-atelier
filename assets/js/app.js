@@ -142,6 +142,8 @@
   const absUrl = (path) => new URL(path, location.href).href;
   const wa = (text) => `https://wa.me/${S.whatsapp}?text=${encodeURIComponent(text)}`;
   const etsyFor = (g) => (g && g.etsy) || S.etsyShop;
+  const STORES = (S.stores || []).filter((x) => x && x.name && /^https:\/\//.test(x.url || ""));
+  const storesFor = (g) => (S.stores || []).filter((x) => x && x.name).map((x) => ({ name: x.name, url: (g && g.shops && g.shops[x.name]) || x.url })).filter((x) => /^https:\/\//.test(x.url || ""));
   const byId = (id) => G.find((g) => g.id === id);
   const kind = (g) => t(g.collection === "afterparty" ? "apDress" : "weddingDress");
   const sameWord = (a, b) => String(a || "").toLocaleLowerCase("tr") === String(b || "").toLocaleLowerCase("tr");
@@ -306,6 +308,7 @@
         <a href="${wa(t("waGeneral"))}" target="_blank" rel="noopener">WhatsApp</a>
         <a href="${S.instagram}" target="_blank" rel="noopener">Instagram</a>
         <a href="${S.etsyShop}" target="_blank" rel="noopener">Etsy</a>
+        ${STORES.map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>`).join("")}
         <span class="lang"><button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button><span>/</span><button type="button" data-lang="tr" aria-pressed="${lang === "tr"}">TR</button></span>
       </div>`;
 
@@ -340,6 +343,7 @@
             <li><a href="mailto:${S.email}">${S.email}</a></li>
             <li><a href="${S.instagram}" target="_blank" rel="noopener">Instagram ${S.instagramHandle}</a></li>
             <li><a href="${S.etsyShop}" target="_blank" rel="noopener">Etsy</a></li>
+            ${STORES.map((x) => `<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a></li>`).join("")}
           </ul></div>
         </div>
         <div class="ftr__base">
@@ -1054,7 +1058,7 @@
             ${g.draft ? `<p class="gown__concept"><b>Taslak önizleme</b> Bu model sitede henüz görünmüyor; panelde "Taslak" kutusunu kaldırınca yayına girer.</p>` : ""}
             ${g.concept ? `<p class="gown__concept"><b>${t("conceptTag")}</b> ${t("conceptNote")}</p>` : ""}
           </div>
-          ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")} ${Number.isFinite(S.shipping) ? t("shipTo", { price: S.shipping ? money(S.shipping) : t("free") }) : t("shipOnQuote")} <a href="atelier.html#faq-customs">${t("customsLink")}</a></p></div>` : ""}
+          ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")} ${t("buyTerms")}</p></div>` : ""}
           <p class="gown__story">${esc(L(g.story))}</p>
           <dl class="specs">
             <dt>${t("silhouette")}</dt><dd>${L(LABELS.silhouette[g.silhouette])}</dd>
@@ -1073,6 +1077,7 @@
           <p class="small opts__note" id="opts-note" hidden>${t("extrasOnQuote")}</p>
           <div class="gown__ctas">
             <a class="btn btn--etsy btn--block" href="${etsyFor(g)}" target="_blank" rel="noopener" data-etsy>${ICON.bag} ${t("orderEtsy")}</a>
+            ${storesFor(g).length ? `<p class="gown__stores"><span>${t("otherStores")}:</span> ${storesFor(g).map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)} ↗</a>`).join("")}</p>` : ""}
             <p class="small" id="etsy-note" hidden>${t("etsyChoices")}</p>
             <div class="gown__ctas-row">
               <a class="btn btn--wa" href="#" target="_blank" rel="noopener" data-wa-gown>${ICON.wa} ${t("askWa")}</a>

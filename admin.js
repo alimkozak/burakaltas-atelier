@@ -105,8 +105,10 @@ window.SITE = {
   showPrices: ${S.showPrices ? "true" : "false"},
   // Kişiselleştirme ücretleri (USD). null = sitede ücret gösterme, 0 = "ücretsiz", sayı = "+$X"
   extras: ${js(cleanExtras(S.extras || {})).replace(/\n/g, "\n  ")},
-  // Kargo ücreti (USD). null = sitede "teklifte netleşir" yazar
+  // Kargo ücreti (USD). Artık sitede gösterilmiyor (kargo mağazanın koşullarına göre)
   shipping: ${Number.isFinite(S.shipping) ? S.shipping : "null"},
+  // Diğer mağazalar (Etsy dışında). Her model için ayrı ilan linki de girilebilir.
+  stores: ${js(S.stores || []).replace(/\n/g, "\n  ")},
   currency: ${q(S.currency || "USD")},
   // Form gönderimi için (isteğe bağlı) formspree.io form ID'si. Boşsa form WhatsApp'a yönlenir.
   formspreeId: ${q(S.formspreeId)},
@@ -168,6 +170,8 @@ function cleanGown(g, collections) {
     fabric: bi(g.fabric, 200), hours: Math.max(0, Number(g.hours) || 0), price: Math.max(0, Number(g.price) || 0),
     weeks: [Math.max(1, w[0] || 8), Math.max(1, w[1] || w[0] || 12)],
     etsy: /^https:\/\/([\w-]+\.)?(etsy\.com|etsy\.me)\//.test(normUrl(g.etsy)) ? normUrl(g.etsy) : "",
+    // This gown's own listing in the other stores: { "Trendyol": "https://…" }
+    ...(() => { const o = Object.fromEntries(Object.entries(g.shops && typeof g.shops === "object" ? g.shops : {}).slice(0, 8).map(([k, v]) => [str(k, 40).trim(), normUrl(v)]).filter(([k, v]) => k && v)); return Object.keys(o).length ? { shops: o } : {}; })(),
     // Instagram post it was imported from (so the importer knows it on every device)
     ...(/^[\w.-]{1,80}$/.test(str(g.ig)) ? { ig: str(g.ig) } : {}),
     images, story: bi(g.story, 1200), ...(g.featured ? { featured: true } : {}),
@@ -183,6 +187,8 @@ function cleanGown(g, collections) {
       ? { model: { height: Math.min(230, Math.max(0, Math.round(Number(g.model.height) || 0))), size: str(g.model.size, 24).trim() } } : {})
   };
 }
+// Other stores (Trendyol, …): a name and the store page; empty rows dropped
+const cleanStores = (list) => (Array.isArray(list) ? list : []).slice(0, 8).map((x) => ({ name: str(x && x.name, 40).trim(), url: normUrl(x && x.url) })).filter((x) => x.name);
 const EXTRA_KEYS = ["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral", "neckHigher", "neckIllusion"];
 // Empty = don't show a price for that option; 0 = "free"; a number = "+$X"
 const cleanExtras = (o = {}) => Object.fromEntries(EXTRA_KEYS.map((k) => {
@@ -308,6 +314,7 @@ async function api(req, res, route, remote) {
         days: Array.isArray(A.days) ? [...new Set(A.days.map(Number))].filter((d) => d >= 0 && d <= 6).sort() : S.appointments.days
       },
       extras: cleanExtras(c.extras),
+      stores: cleanStores(c.stores),
       shipping: c.shipping === "" || c.shipping === null || c.shipping === undefined || !Number.isFinite(+c.shipping) ? null : Math.max(0, Math.round(+c.shipping)),
       analytics: { cloudflareToken: (/[a-f0-9]{32}/i.exec(str(c.analytics && c.analytics.cloudflareToken, 400)) || [""])[0].toLowerCase() },
       chat: (() => {

@@ -495,9 +495,10 @@
           </section>
 
           <section class="card">
-            <h2>Satış</h2><p class="hint">Etsy'de bu modelin ilanını açın ve linkini yapıştırın (Etsy › ilan › Paylaş › "Share & Save" linki önerilir — %4 ücret iadesi). Boşsa buton mağaza ana sayfasına gider.</p>
+            <h2>Satış</h2><p class="hint">Gelinliği beğenen kişi mağazadan satın alır. Etsy'de bu modelin ilanını açın ve linkini yapıştırın (Etsy › ilan › Paylaş › "Share & Save" linki önerilir — %4 ücret iadesi). Boşsa buton mağaza ana sayfasına gider.</p>
             <div class="grid2">
               <label class="f full"><span>Etsy ilan linki</span><input class="in" name="etsy" type="url" inputmode="url" autocapitalize="off" value="${esc(g.etsy)}" placeholder="https://www.etsy.com/listing/…"><small class="err-text" id="etsy-err" hidden>Bu bir Etsy ilan linki değil. Etsy'de ilanı açın › Paylaş › linki kopyalayıp buraya yapıştırın.</small></label>
+              ${(DB.site.stores || []).map((x, i) => `<label class="f full"><span>${esc(x.name)} ilan linki <em>(isteğe bağlı)</em></span><input class="in" data-shop="${esc(x.name)}" type="url" inputmode="url" autocapitalize="off" value="${esc((g.shops || {})[x.name] || "")}" placeholder="Boşsa ${esc(x.name)} mağaza sayfasına gider"></label>`).join("")}
               <label class="check"><input type="checkbox" name="featured" ${g.featured ? "checked" : ""}> Ana sayfada öne çıkar ★</label>
               <label class="check full"><input type="checkbox" name="draft" ${g.draft ? "checked" : ""}> Taslak — sitede gösterme <small style="display:block;color:var(--mute);margin-left:26px">Instagram'dan aktarılan modeller taslak olarak gelir. Bilgileri kontrol edip bu kutuyu kaldırınca model yayına girer.</small></label>
               <label class="check full"><input type="checkbox" name="concept" ${g.concept ? "checked" : ""}> Henüz dikilmedi — görseller çizim ya da görselleştirme <small style="display:block;color:var(--mute);margin-left:26px">Sitede “Tasarım · sipariş üzerine dikilir” etiketi ve açıklaması çıkar. Yapay zekâyla üretilmiş görsel kullanıyorsanız Etsy ilanında da belirtin.</small></label>
@@ -526,7 +527,7 @@
         price: parseMoney(fd.get("price")) ?? 0, meaning: readBi(form, "meaning"), silhouette: fd.get("silhouette"), neckline: fd.get("neckline"),
         features: fd.getAll("features"), fabric: readBi(form, "fabric"), hours: Number(fd.get("hours")) || 0,
         weeks: [Number(fd.get("w0")) || 8, Number(fd.get("w1")) || Number(fd.get("w0")) || 12],
-        story: readBi(form, "story"), etsy: normUrl(fd.get("etsy")), featured: fd.get("featured") === "on", concept: fd.get("concept") === "on", draft: fd.get("draft") === "on", images: g.images,
+        story: readBi(form, "story"), etsy: normUrl(fd.get("etsy")), shops: Object.fromEntries($$("[data-shop]", form).map((el) => [el.dataset.shop, normUrl(el.value)]).filter(([, v]) => v)), featured: fd.get("featured") === "on", concept: fd.get("concept") === "on", draft: fd.get("draft") === "on", images: g.images,
         model: { height: Number(fd.get("modelH")) || 0, size: (fd.get("modelS") || "").trim() }
       };
     };
@@ -748,7 +749,10 @@
           <div class="grid2">
             ${[["colour", "Renk değişikliği (fildişi dışında)"], ["sleevesLong", "Uzun kol ekleme"], ["sleevesDetachable", "Takılıp çıkarılabilir kol"], ["trainShorter", "Daha kısa kuyruk"], ["trainCathedral", "Katedral boy kuyruk"], ["neckHigher", "Daha kapalı yaka"], ["neckIllusion", "Tül (illüzyon) yaka"]].map(([k, label]) => `<label class="f"><span>${label}</span>${moneyInput(`ex_${k}`, (S.extras || {})[k] ?? "", { ph: "boş = gösterme" })}</label>`).join("")}
           </div>
-          <label class="f" style="margin-top:14px"><span>Kargo ücreti (USD)</span>${moneyInput("shipping", Number.isFinite(S.shipping) ? S.shipping : "", { ph: "boş = teklifte netleşir" })}<small>Model sayfasında “Takipli, sigortalı kargo: $X” yazar. Boş bırakılırsa “kargo teklifte netleşir” yazar; 0 = ücretsiz.</small></label>
+        </section>
+        <section class="card"><h2>Mağazalar</h2><p class="hint">Gelinliği beğenen kişi bu mağazalardan satın alır. Etsy ana mağazadır (her modelin Etsy linki model sayfasından girilir). Buraya Trendyol gibi diğer mağazalarınızı ekleyin; sitede Etsy düğmesinin altında ve sayfa sonunda görünürler. Bir modelin o mağazadaki ilan linkini model sayfasından ayrıca girebilirsiniz.</p>
+          <div class="rows" id="stores">${(S.stores || []).concat({ name: "", url: "" }).map((x, i) => `<div class="grid2"><label class="f"><span>Mağaza adı</span><input class="in" data-sn="${i}" value="${esc(x.name)}" placeholder="ör. Trendyol" maxlength="40"></label><label class="f"><span>Mağaza linki</span><input class="in" data-su="${i}" type="url" inputmode="url" autocapitalize="off" value="${esc(x.url)}" placeholder="https://www.trendyol.com/magaza/…"></label></div>`).join("")}</div>
+          <small>Yeni mağaza eklemek için en alttaki boş satırı doldurup kaydedin. Silmek için adını silip kaydedin.</small>
         </section>
         <section class="card"><h2>Canlı sohbet <em class="tech">kurulumu Alim yapar</em></h2><p class="hint">Ücretsiz Tawk.to hesabı açın (README'de adımlar). Sonra tawk.to › Administration › Chat Widget bölümündeki embed kodunda geçen adresi (https://embed.tawk.to/…) olduğu gibi aşağıya yapıştırın. Boş bırakırsanız sitede yalnızca WhatsApp butonu görünür. Mesajlara Tawk.to'nun telefon uygulamasından cevap verirsiniz.</p>
           <div class="grid2">
@@ -781,10 +785,12 @@
       site.appointments = { start: +fd.get("start"), end: +fd.get("end"), days: fd.getAll("days").map(Number), calcomUser: (fd.get("calcomUser") || "").trim() };
       site.analytics = { cloudflareToken: (fd.get("cfToken") || "").trim() };
       site.extras = Object.fromEntries(["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral", "neckHigher", "neckIllusion"].map((k) => [k, parseMoney(fd.get(`ex_${k}`))]));
-      site.shipping = parseMoney(fd.get("shipping"));
-      const bad = (name, t) => { toast(t, true); const el = form.elements[name]; el.focus(); el.scrollIntoView({ block: "center" }); };
-      if ([site.shipping, ...Object.values(site.extras)].some((v) => Number.isNaN(v))) {
-        const k = ["shipping", ...Object.keys(site.extras).map((x) => `ex_${x}`)].find((n) => Number.isNaN(parseMoney(fd.get(n))));
+      site.stores = $$("[data-sn]").map((el) => ({ name: el.value.trim(), url: normUrl($(`[data-su="${el.dataset.sn}"]`).value) })).filter((x) => x.name);
+      const badStore = site.stores.find((x) => x.url && !/^https:\/\/[^\s"'<>]+\.[^\s"'<>]+$/.test(x.url));
+      if (badStore) return bad(`su${0}`, `${badStore.name} linki geçersiz görünüyor`);
+      const bad = (name, t) => { toast(t, true); const el = form.elements[name]; if (el) { el.focus(); el.scrollIntoView({ block: "center" }); } };
+      if (Object.values(site.extras).some((v) => Number.isNaN(v))) {
+        const k = Object.keys(site.extras).map((x) => `ex_${x}`).find((n) => Number.isNaN(parseMoney(fd.get(n))));
         return bad(k, "Ücretler dolar olarak, sadece rakamla yazılır (ör. 120)");
       }
       // phone: 0541… / +90 541… / 0090… → 905417169862
@@ -843,20 +849,18 @@
         { k: "email", t: "E-posta adresi", d: `${S.email} — alan adı alınınca bu adres kurulmalı ya da gerçek adres yazılmalı`, go: "#ayarlar" },
         { k: "etsy", t: "Etsy mağaza linki", d: S.etsyShop, go: "#ayarlar" },
         { k: "domain", t: "Alan adı", d: `${S.domain} — satın alındı ve bu adres doğru`, go: "#ayarlar" },
-        { k: "policies", t: "Gizlilik & koşullar sayfası okundu ve onaylandı", d: "İade/tadilat, verilerin saklanma süresi, üretim ve kargo süreleri" },
+        { k: "policies", t: "Gizlilik & koşullar sayfası okundu ve onaylandı", d: "Kişisel verilerin saklanma süresi, üretim süreleri (satış koşulları mağazalarda)" },
         { k: "measure", t: "Ölçü kartı ifadeleri teyit edildi", d: "Bolluk payı, topuk yüksekliği, \"2 kg / 2 cm değişirse yeniden ölçün\"" },
         { k: "numbers", t: "Ana sayfadaki rakamlar teyit edildi", d: "Örn. işçilik saatleri ve inci sayıları" },
         { k: "consent", t: "Gerçek gelin fotoğrafları için izin alındı", d: "Site ve Instagram için gelinden yazılı onay (kişisel veriler kanunu gereği)" },
-        { k: "payment", t: "Ödeme, iptal ve iade kargosu yazıldı", d: "Etsy'de ödemenin tamamı mı alınıyor, kesimden önce iptal olursa ne olur, atölye hatasında geri gönderim kargosunu kim öder — gelinler en çok bunu sordu (Gizlilik & koşullar sayfası)" },
         { k: "callfees", t: "Ölçü ve prova görüşmelerinin ücreti netleşti", d: "\"Siparişe dahil\" mi? Şu an yalnızca tasarım görüşmesi \"ücretsiz\" yazıyor" },
-        { k: "privacy", t: "Fotoğraf ve görüşme gizliliği yazıldı", d: "Vücut fotoğraflarını kim görüyor, görüntülü görüşmeler kaydediliyor mu, fotoğraflar asla paylaşılmaz mı" },
         { k: "staff", t: "Kadın personel bilgisi netleşti", d: "Ölçüyü bir kadının alması seçilebiliyor — tasarım görüşmesinde de kadın personel olabilir mi" }
       ]],
       ["İsteğe bağlı", [
         { st: S.chat && S.chat.tawkPropertyId ? "ok" : "opt", t: "Canlı sohbet (Tawk.to)", d: S.chat && S.chat.tawkPropertyId ? "Açık" : "Kapalı — gelinler yalnızca WhatsApp'tan yazabilir", go: "#ayarlar" },
         { st: S.analytics && S.analytics.cloudflareToken ? "ok" : "opt", t: "Ziyaretçi istatistikleri", d: S.analytics && S.analytics.cloudflareToken ? "Açık" : "Kapalı — kaç kişinin geldiğini göremezsiniz", go: "#ayarlar" },
         { st: S.appointments && S.appointments.calcomUser ? "ok" : "opt", t: "Otomatik takvim (Cal.com)", d: S.appointments && S.appointments.calcomUser ? "Açık" : "Kapalı — randevu talepleri WhatsApp'a düşüyor", go: "#ayarlar" },
-        { st: Number.isFinite(S.shipping) ? "ok" : "opt", t: "Kargo ücreti", d: Number.isFinite(S.shipping) ? `$${S.shipping}` : "Girilmemiş — model sayfasında \"teklifte netleşir\" yazıyor", go: "#ayarlar" },
+        { st: (S.stores || []).some((x) => x.url) ? "ok" : "opt", t: "Diğer mağazalar (Trendyol…)", d: (S.stores || []).some((x) => x.url) ? (S.stores || []).filter((x) => x.url).map((x) => x.name).join(", ") : "Mağaza linkleri girilmemiş — sitede yalnızca Etsy görünüyor", go: "#ayarlar" },
         { st: S.extras && Object.values(S.extras).some((v) => v !== null) ? "ok" : "opt", t: "Kişiselleştirme ücretleri", d: S.extras && Object.values(S.extras).some((v) => v !== null) ? "Girilmiş" : "Girilmemiş — seçeneklerde ücret yazmıyor", go: "#ayarlar" }
       ]]
     ].map(([title, items]) => [title, items.map((x) => (x.k ? { ...x, st: m[x.k] ? "ok" : "todo" } : x))]);

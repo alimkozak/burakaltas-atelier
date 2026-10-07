@@ -46,7 +46,13 @@ function stampAssets(dir, { strip = false } = {}) {
   }
 }
 // Netlify reads this file from the published folder (netlify.toml isn't part of a drag-and-drop)
-const HEADERS = `/*.html
+const HEADERS = `/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  X-Frame-Options: SAMEORIGIN
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+/*.html
   Cache-Control: public, max-age=0, must-revalidate
 /
   Cache-Control: public, max-age=0, must-revalidate

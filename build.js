@@ -210,8 +210,13 @@ function makeDist() {
   fs.rmSync(DIST, { recursive: true, force: true });
   fs.mkdirSync(DIST);
   const html = fs.readdirSync(root).filter((f) => f.endsWith(".html"));
+  // The published catalogue leaves out drafts (and so their photos) — they stay on this computer
+  const W0 = loadSite();
+  const publicData = `/* Burak Altaş Atelier — katalog (yayın kopyası, taslaklar hariç) */\n` +
+    ["COLLECTIONS", "GOWNS", "MEDIA", "REVIEWS", "DESIGNER"].filter((k) => W0[k] !== undefined)
+      .map((k) => `window.${k} = ${JSON.stringify(k === "GOWNS" ? W0.GOWNS.filter((g) => !g.draft) : W0[k], null, 1)};`).join("\n") + "\n";
   // Every upload path mentioned in the catalogue or settings (photos, posters, videos, portraits)
-  const refs = ["assets/js/data.js", "assets/js/config.js"].map((f) => fs.readFileSync(path.join(root, f), "utf8")).join("\n");
+  const refs = publicData + fs.readFileSync(path.join(root, "assets/js/config.js"), "utf8");
   const used = new Set(refs.match(/assets\/(?:img|video)\/uploads\/[\w.-]+/g) || []);
   for (const f of [...html, ...PUBLIC]) {
     const from = path.join(root, f);
@@ -223,8 +228,17 @@ function makeDist() {
       return !/^assets\/(img|video)\/uploads\/.+\.\w+$/.test(rel) || used.has(rel.replace(/-(sm|xs)(\.\w+)$/, "$2"));
     } });
   }
+  fs.writeFileSync(path.join(DIST, "assets/js/data.js"), publicData);
   // English pages point search engines at their Turkish twins (the source files stay untouched)
-  const S = loadSite().SITE;
+  const S = W0.SITE;
+  // Link previews (WhatsApp, Instagram…) of the home and collection pages show a real gown photo
+  // once one is uploaded: the first featured gown's cover
+  const cover = (W0.GOWNS.filter((g) => !g.draft).find((g) => g.featured && /^assets\//.test(g.images[0] || "")) ||
+    W0.GOWNS.filter((g) => !g.draft).find((g) => /^assets\//.test(g.images[0] || "")) || {}).images?.[0];
+  if (cover) for (const f of ["index.html", "collection.html", "tr/index.html", "tr/collection.html"]) {
+    const p = path.join(DIST, f);
+    if (fs.existsSync(p)) fs.writeFileSync(p, fs.readFileSync(p, "utf8").replace(/(<meta property="og:image" content=")[^"]*(")/, `$1${S.domain}/${cover}$2`));
+  }
   for (const f of fs.readdirSync(DIST).filter((f) => f.endsWith(".html") && !/^gown-/.test(f) && f !== "404.html")) {
     const file = path.join(DIST, f);
     fs.writeFileSync(file, withLangLinks(fs.readFileSync(file, "utf8"), S.domain, f, "en"));

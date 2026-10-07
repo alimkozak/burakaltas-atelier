@@ -7,7 +7,9 @@
   document.documentElement.classList.add("js");
 
   // Drafts (imported but not reviewed yet) stay in the admin panel only
-  const S = window.SITE, G = (window.GOWNS || []).filter((g) => !g.draft), C = window.COLLECTIONS, M = window.MEDIA, R = window.REVIEWS;
+  // (?taslak=1 previews them from the panel — the published catalogue has no drafts at all)
+  const PREVIEW_DRAFTS = new URLSearchParams(location.search).get("taslak") === "1";
+  const S = window.SITE, G = (window.GOWNS || []).filter((g) => !g.draft || PREVIEW_DRAFTS), C = window.COLLECTIONS, M = window.MEDIA, R = window.REVIEWS;
   const I = window.I18N || { tr: {}, ui: {} };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -996,6 +998,7 @@
           <div>
             <h1 class="gown__name">${esc(g.name)}</h1>
             <p class="gown__meaning">— ${esc(L(g.meaning))}</p>
+            ${g.draft ? `<p class="gown__concept"><b>Taslak önizleme</b> Bu model sitede henüz görünmüyor; panelde "Taslak" kutusunu kaldırınca yayına girer.</p>` : ""}
             ${g.concept ? `<p class="gown__concept"><b>${t("conceptTag")}</b> ${t("conceptNote")}</p>` : ""}
           </div>
           ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")}</p></div>` : ""}

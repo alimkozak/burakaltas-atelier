@@ -306,7 +306,7 @@
     const isNew = !existing;
     view.innerHTML = `
       <div class="head">
-        <div><h1>${isNew ? "Yeni model" : esc(g.name)}</h1><p>${isNew ? "Alanları doldurup fotoğrafları ekleyin. Kaydedince model sitede hemen yayına hazır olur." : `Kod ${esc(g.no)} · <a href="/gown-${esc(g.id)}.html" target="_blank" rel="noopener">sitede gör ↗</a>`}</p></div>
+        <div><h1>${isNew ? "Yeni model" : esc(g.name)}</h1><p>${isNew ? "Alanları doldurup fotoğrafları ekleyin. Kaydedince model sitede hemen yayına hazır olur." : `Kod ${esc(g.no)} · <a href="${g.draft ? `/gown.html?g=${esc(g.id)}&taslak=1` : `/gown-${esc(g.id)}.html`}" target="_blank" rel="noopener">${g.draft ? "taslağı önizle ↗" : "sitede gör ↗"}</a>`}</p></div>
         <a class="btn btn--ghost" href="#modeller">← Modellere dön</a>
       </div>
       <form class="editor" id="ed" novalidate>

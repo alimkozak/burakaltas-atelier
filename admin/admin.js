@@ -29,26 +29,69 @@
   }
   // Saves carry the version of the data they were based on, so two people editing at once
   // can't silently overwrite each other (the server answers 409 if someone saved in between)
-  const VER_OF = { gowns: "data", designer: "data", reviews: "data", config: "config" };
-  async function post(route, body) {
+  const VER_OF = { gowns: "gowns", designer: "designer", reviews: "reviews", config: "config" };
+  // Saves run one after another: a double tap on Save sends the second save with the version the
+  // first one returned, instead of tripping the "someone else saved" check against itself
+  let queue = Promise.resolve(), uploading = 0;
+  const post = (route, body) => {
+    if (uploading && route !== "upload") return Promise.reject(new Error("Fotoğraflar hâlâ yükleniyor — bitince tekrar Kaydet'e basın"));
+    const run = queue.then(() => send(route, body));
+    queue = run.catch(() => {});
+    return run;
+  };
+  async function send(route, body) {
     const vk = VER_OF[route];
     const payload = vk && DB.ver ? { ...body, ver: DB.ver[vk] } : body;
-    const r = await fetch(`/api/${route}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    let r;
+    try { r = await fetch(`/api/${route}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); }
+    catch { throw new Error("Bağlantı koptu. İnternetinizi kontrol edip tekrar deneyin — yazdıklarınız bu ekranda duruyor."); }
     const j = await r.json().catch(() => ({}));
-    if (r.status === 401 && j.login) { dirty = false; location.href = "/giris"; }
+    if (r.status === 401 && j.login) { showLogin(); throw new Error("Oturum kapandı — kaydedilmedi. Yazdıklarınız bu ekranda duruyor."); }
     if (r.status === 409) showConflict();
     if (!r.ok) throw new Error(j.error || "Kaydedilemedi");
     if (j.ver) DB.ver = j.ver;
     return j;
   }
-  function showConflict() {
-    if ($("#conflict")) return;
-    const bar = document.createElement("div");
-    bar.id = "conflict"; bar.className = "conflict"; bar.setAttribute("role", "alert");
-    bar.innerHTML = `<span><b>Bu arada başka biri de kaydetti.</b> Sizin son değişikliğiniz kaydedilmedi; onun işini silmemek için sayfayı yenileyip değişikliğinizi tekrar yapın.</span><button type="button" class="btn btn--sm">Sayfayı yenile</button>`;
-    bar.querySelector("button").onclick = () => { dirty = false; location.reload(); };
-    document.body.append(bar);
+  const bar = (id, html) => {
+    $(`#${id}`)?.remove();
+    const el = document.createElement("div");
+    el.id = id; el.className = "conflict"; el.setAttribute("role", "alert"); el.innerHTML = html;
+    document.body.prepend(el);
+    return el;
+  };
+  // Signed out (session ended, panel restarted): never leave the page — the edits would be lost.
+  // Sign in again in a new tab, come back, press Save again.
+  function showLogin() {
+    const el = bar("relogin", `<span><b>Oturumunuz kapandı.</b> Yazdıklarınız bu ekranda duruyor. Yeni sekmede giriş yapın, sonra bu sekmeye dönüp tekrar <b>Kaydet</b>'e basın.</span><a class="btn btn--sm" href="/giris" target="_blank" rel="noopener">Giriş yap ↗</a>`);
+    addEventListener("focus", function back() { fetch("/api/data", { cache: "no-store" }).then((r) => { if (r.ok) { el.remove(); removeEventListener("focus", back); } }); });
   }
+  function showConflict() {
+    const el = bar("conflict", `<span><b>Bu arada başka biri de aynı yeri kaydetti.</b> Sizin son değişikliğiniz kaydedilmedi. Yazdıklarınız bu ekranda duruyor: önemli bir metin varsa kopyalayın, sonra sayfayı yenileyip tekrar yapın.</span><span class="row"><button type="button" class="btn btn--sm btn--ghost" data-x>Kapat</button><button type="button" class="btn btn--sm" data-r>Sayfayı yenile</button></span>`);
+    $("[data-r]", el).onclick = () => { dirty = false; location.reload(); };
+    $("[data-x]", el).onclick = () => el.remove();
+  }
+
+  /* Prices typed the Turkish way: "45.000" = 45000, "3,200" = 3200, "$1290" = 1290.
+     Returns a number, null for empty, or NaN when it can't be read (e.g. "45.000 TL"). */
+  function parseMoney(v) {
+    let s = String(v ?? "").trim().toLocaleLowerCase("tr");
+    if (!s) return null;
+    if (/tl|₺|lira|eur|€|£|gbp/.test(s)) return NaN;
+    s = s.replace(/usd|dolar|\$|\s/g, "");
+    if (/^\d{1,3}([.,]\d{3})+$/.test(s)) return +s.replace(/[.,]/g, "");
+    if (/^\d+([.,]\d{1,2})?$/.test(s)) return Math.round(+s.replace(",", "."));
+    return NaN;
+  }
+  const moneyInput = (name, val, { ph = "ör. 1290", attrs = "" } = {}) =>
+    `<input class="in" name="${name}" data-money inputmode="decimal" autocomplete="off" value="${val === null || val === undefined || val === "" ? "" : esc(val)}" placeholder="${esc(ph)}" ${attrs}><small class="money__hint" aria-live="polite"></small>`;
+  // Live "= $45,000" under every price field, so a typo is seen before saving
+  document.addEventListener("input", (e) => {
+    const el = e.target.closest?.("[data-money]"); if (!el) return;
+    const h = el.parentElement.querySelector(".money__hint"); if (!h) return;
+    const n = parseMoney(el.value);
+    h.textContent = n === null ? "" : Number.isNaN(n) ? "Dolar (USD) olarak, sadece rakamla yazın — ör. 1290" : `= ${money(n)}`;
+    h.classList.toggle("is-err", Number.isNaN(n));
+  });
   async function reload() {
     const r = await fetch("/api/data", { cache: "no-store" });
     if (r.status === 401) { location.href = "/giris"; return; }
@@ -93,7 +136,8 @@
         <div class="photos">${list.map((id, i) => `
           <div class="photo" draggable="true" data-i="${i}">
             <img src="${esc(src(id, 400))}" alt="">
-            ${max > 1 && i === 0 ? `<span class="photo__tag">Kapak</span>` : ""}${max > 1 && i === 1 ? `<span class="photo__tag">Arka / 2. görsel</span>` : ""}
+            ${max > 1 && i === 0 ? `<span class="photo__tag">Kapak</span>` : ""}${max > 1 && i === 1 ? `<span class="photo__tag">2. görsel</span>` : ""}
+            ${max > 1 && i > 0 ? `<button type="button" class="photo__cover" data-cover aria-label="Kapak yap" title="Kapak yap">★</button>` : ""}
             <div class="photo__acts">
               ${max > 1 ? `<button type="button" data-mv="-1" aria-label="Sola taşı" ${i === 0 ? "disabled" : ""}>←</button>` : "<span></span>"}
               <button type="button" data-rm aria-label="Kaldır">✕</button>
@@ -105,14 +149,29 @@
         const box = $(".uploading", container);
         files = [...files].slice(0, Math.max(0, max - list.length) || (max === 1 ? 1 : 0));
         if (!files.length) { toast(`En fazla ${max} fotoğraf`, true); return; }
+        // Each photo on its own: a broken file is skipped, the others still go up, and what's
+        // uploaded is on screen straight away (so screen and saved gown never disagree)
+        const failed = [];
+        uploading++;
         try {
           for (let k = 0; k < files.length; k++) {
-            box.hidden = false; box.textContent = `Yükleniyor ${k + 1} / ${files.length}…`;
-            const p = await processAndUpload(files[k], name());
-            if (max === 1) list.splice(0, list.length, p); else list.push(p);
+            if (box.isConnected) { box.hidden = false; box.textContent = `Yükleniyor ${k + 1} / ${files.length}…`; }
+            try {
+              if (!files[k].size) throw new Error("boş dosya");
+              const p = await processAndUpload(files[k], name());
+              if (max === 1) list.splice(0, list.length, p); else list.push(p);
+              onChange();
+            } catch (e) {
+              failed.push(/desteklenmiyor|Bağlantı|Oturum/.test(e.message) ? e.message : `"${files[k].name}" açılamadı (bozuk ya da boş dosya)`);
+              if (/Bağlantı|Oturum/.test(e.message)) break;
+            }
           }
-          onChange(); draw(); toast("Fotoğraflar eklendi — kaydetmeyi unutmayın");
-        } catch (e) { box.hidden = true; toast(e.message, true); }
+        } finally { uploading--; }
+        if (!container.isConnected) return;
+        draw();
+        const ok = files.length - failed.length;
+        if (failed.length) toast(`${ok ? `${ok} fotoğraf eklendi. ` : ""}${failed.join(" · ")}`, true);
+        else toast(`${ok > 1 ? "Fotoğraflar" : "Fotoğraf"} eklendi — kaydetmeyi unutmayın`);
       };
       input.addEventListener("change", () => handle(input.files));
       drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
@@ -132,6 +191,7 @@
         const ph = e.target.closest(".photo"); if (!ph) return;
         const i = +ph.dataset.i;
         if (e.target.closest("[data-rm]")) { list.splice(i, 1); onChange(); draw(); }
+        if (e.target.closest("[data-cover]")) { list.unshift(...list.splice(i, 1)); onChange(); draw(); }
         const mv = e.target.closest("[data-mv]");
         if (mv) { const j = i + +mv.dataset.mv; [list[i], list[j]] = [list[j], list[i]]; onChange(); draw(); }
       };
@@ -209,8 +269,9 @@
         const box = $(".uploading", container), say = (t) => { box.hidden = false; $("span", box).textContent = t; };
         const bar = (p) => ($(".bar i", box).style.width = `${Math.round(p * 100)}%`);
         let url;
+        if (!file) return;
+        uploading++;
         try {
-          if (!file) return;
           if (!VIDEO_TYPES.includes(file.type)) throw new Error(`"${file.name}" bir video değil ya da desteklenmiyor. MP4 ya da MOV yükleyin.`);
           if (file.size > 95 * 1048576) throw new Error(`Video çok büyük (${mb(file.size)}). 1080p ve 10–20 saniye olarak yeniden kaydedin; en fazla 95 MB.`);
           say("Video kontrol ediliyor…"); bar(0);
@@ -230,7 +291,7 @@
           onChange(); draw();
           toast(file.size > 30 * 1048576 ? `Video eklendi (${mb(file.size)}). Biraz büyük: mobil veride geç açılabilir — 1080p yeterli.` : "Video eklendi — kaydetmeyi unutmayın", file.size > 30 * 1048576);
         } catch (err) { box.hidden = true; toast(err.message, true); }
-        finally { if (url) URL.revokeObjectURL(url); }
+        finally { uploading--; if (url) URL.revokeObjectURL(url); }
       };
       input.addEventListener("change", () => handle(input.files[0]));
       drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
@@ -245,7 +306,8 @@
      MODELLER
      ====================================================================== */
   /* ---------- Quick edit: Etsy links, prices, featured, draft — every gown on one screen ---------- */
-  const ETSY = /^https:\/\/(www\.)?(etsy\.com|etsy\.me)\//;
+  const ETSY = /^https:\/\/([\w-]+\.)?(etsy\.com|etsy\.me)\//;
+  const normUrl = (v) => { let u = String(v || "").trim(); if (!u) return ""; if (/^http:\/\//i.test(u)) u = "https://" + u.slice(7); if (!/^https:\/\//i.test(u)) u = "https://" + u.replace(/^\/+/, ""); return u; };
   function renderQuick() {
     const rows = DB.gowns.map((g) => ({ id: g.id, etsy: g.etsy || "", price: g.price || 0, featured: !!g.featured, draft: !!g.draft }));
     view.innerHTML = `
@@ -260,8 +322,8 @@
           <tr data-row="${i}" data-q="${esc(`${g.name} ${g.no}`.toLocaleLowerCase("tr"))}">
             <td class="qtable__no">${esc(g.no)}</td>
             <td><a href="#model=${encodeURIComponent(g.id)}">${esc(g.name)}</a></td>
-            <td><input class="in" type="number" min="0" step="10" data-f="price" value="${g.price || ""}" aria-label="${esc(g.name)} fiyat"></td>
-            <td><input class="in" type="url" data-f="etsy" value="${esc(g.etsy || "")}" placeholder="https://www.etsy.com/listing/…" aria-label="${esc(g.name)} Etsy linki"><small class="qerr" hidden>Geçerli bir Etsy linki değil</small></td>
+            <td><input class="in" data-f="price" data-money inputmode="decimal" autocomplete="off" value="${g.price || ""}" aria-label="${esc(g.name)} fiyat"><small class="money__hint" aria-live="polite"></small></td>
+            <td><input class="in" type="url" inputmode="url" autocapitalize="off" data-f="etsy" value="${esc(g.etsy || "")}" placeholder="https://www.etsy.com/listing/…" aria-label="${esc(g.name)} Etsy linki"><small class="qerr" hidden>Geçerli bir Etsy linki değil</small></td>
             <td><input type="checkbox" data-f="featured" ${g.featured ? "checked" : ""} aria-label="${esc(g.name)} öne çıkar"></td>
             <td><input type="checkbox" data-f="draft" ${g.draft ? "checked" : ""} aria-label="${esc(g.name)} taslak"></td>
           </tr>`).join("")}</tbody>
@@ -272,7 +334,7 @@
       $$("tr[data-row]").forEach((tr) => (tr.hidden = !!q && !tr.dataset.q.includes(q)));
     });
     const check = (tr) => {
-      const v = $('[data-f="etsy"]', tr).value.trim();
+      const v = normUrl($('[data-f="etsy"]', tr).value);
       const bad = !!v && !ETSY.test(v);
       $(".qerr", tr).hidden = !bad;
       $('[data-f="etsy"]', tr).setAttribute("aria-invalid", String(bad));
@@ -281,7 +343,7 @@
     view.oninput = (e) => {
       const tr = e.target.closest("tr[data-row]"); if (!tr) return;
       const r = rows[+tr.dataset.row], f = e.target.dataset.f;
-      r[f] = e.target.type === "checkbox" ? e.target.checked : f === "price" ? Number(e.target.value) || 0 : e.target.value.trim();
+      r[f] = e.target.type === "checkbox" ? e.target.checked : f === "price" ? parseMoney(e.target.value) : f === "etsy" ? normUrl(e.target.value) : e.target.value.trim();
       if (f === "etsy") check(tr);
       markDirty();
     };
@@ -290,18 +352,22 @@
       if (!e.target.closest("[data-qsave]")) return;
       const trs = [...$$("tr[data-row]")];
       const bad = trs.filter((tr) => !check(tr));
+      const badPrice = rows.filter((r) => Number.isNaN(r.price));
       const noPrice = rows.filter((r) => !r.draft && !(r.price > 0));
       const msg = $(".savebar .msg");
       if (bad.length) { msg.textContent = `${bad.length} satırda Etsy linki hatalı`; msg.classList.add("err"); bad[0].hidden = false; $('[data-f="etsy"]', bad[0]).focus(); return; }
+      if (badPrice.length) { msg.textContent = `${badPrice.length} satırda fiyat okunamadı — dolar olarak, sadece rakamla yazın`; msg.classList.add("err"); return; }
+      const cheap = rows.filter((r) => r.price > 0 && r.price < 100);
+      if (cheap.length && !confirm(`${cheap.map((r) => DB.gowns.find((g) => g.id === r.id).name + ": " + money(r.price)).join(", ")} — fiyat doğru mu? (Fiyatlar dolar olarak yazılır.)`)) return;
       if (noPrice.length) { msg.textContent = `${noPrice.length} modelin fiyatı yok (taslak değilse fiyat gerekli)`; msg.classList.add("err"); return; }
       const list = DB.gowns.map((g, i) => {
-        const r = rows[i], x = { ...g, etsy: r.etsy, price: r.price };
+        const r = rows[i], x = { ...g, etsy: r.etsy, price: r.price || 0 };
         r.featured ? (x.featured = true) : delete x.featured;
         r.draft ? (x.draft = true) : delete x.draft;
         return x;
       });
       const btn = e.target.closest("[data-qsave]"); btn.disabled = true; btn.textContent = "Kaydediliyor…";
-      try { await post("gowns", { gowns: list }); dirty = false; await reload(); toast("Kaydedildi · site güncellendi"); renderQuick(); }
+      try { await post("gowns", { gowns: list }); dirty = false; await reload(); toast("Kaydedildi"); renderQuick(); }
       catch (err) { msg.textContent = err.message; msg.classList.add("err"); btn.disabled = false; btn.textContent = "Kaydet"; }
     };
   }
@@ -317,7 +383,19 @@
         <input type="search" id="q" placeholder="Model adı ya da kodu ile ara…" aria-label="Ara">
         <select id="fc" aria-label="Koleksiyon"><option value="">Tüm koleksiyonlar</option>${C.map((c) => `<option value="${c.id}">${esc(c.name.tr || c.name.en)}</option>`).join("")}</select>
       </div>
-      <div class="list" id="list"></div>`;
+      <div class="list" id="list"></div>
+      ${(DB.trash || []).length ? `<details class="card trash"><summary>Son silinen modeller (${DB.trash.length})</summary>
+        <p class="hint">Yanlışlıkla sildiyseniz buradan geri getirin. Fotoğrafları da geri gelir.</p>
+        <div class="list">${DB.trash.map((t) => `<div class="item item--trash">
+          ${t.image ? `<img src="${esc(src(t.image, 200))}" alt="" loading="lazy">` : `<div class="noimg"></div>`}
+          <div><div class="item__name">${esc(t.name)}</div><div class="item__meta"><span>${esc(t.no)}</span><span>${new Date(t.date).toLocaleDateString("tr-TR")} silindi</span></div></div>
+          <div class="item__acts"><button class="btn btn--sm" data-restore="${esc(t.id)}">Geri getir</button></div>
+        </div>`).join("")}</div></details>` : ""}`;
+    view.querySelectorAll("[data-restore]").forEach((b) => (b.onclick = async () => {
+      b.disabled = true;
+      try { await post("restore", { id: b.dataset.restore }); await reload(); renderList(); toast("Model geri geldi"); }
+      catch (err) { toast(err.message, true); b.disabled = false; }
+    }));
     const draw = () => {
       const q = $("#q").value.toLocaleLowerCase("tr"), fc = $("#fc").value;
       $("#list").innerHTML = G.map((g, i) => ({ g, i })).filter(({ g }) => (!fc || g.collection === fc) && (!q || `${g.name} ${g.no}`.toLocaleLowerCase("tr").includes(q))).map(({ g, i }) => {
@@ -333,7 +411,7 @@
             <button class="icon" data-up title="Yukarı taşı" aria-label="Yukarı taşı" ${i === 0 ? "disabled" : ""}>↑</button>
             <button class="icon" data-down title="Aşağı taşı" aria-label="Aşağı taşı" ${i === G.length - 1 ? "disabled" : ""}>↓</button>
             <button class="icon" data-star title="Öne çıkar" aria-label="Öne çıkar" aria-pressed="${!!g.featured}">${g.featured ? "★" : "☆"}</button>
-            <a class="btn btn--sm btn--ghost" href="/gown-${esc(g.id)}.html" target="_blank" rel="noopener">Önizle ↗</a>
+            <a class="btn btn--sm btn--ghost" href="${g.draft ? `/gown.html?g=${esc(g.id)}&taslak=1` : `/gown-${esc(g.id)}.html`}" target="_blank" rel="noopener">Önizle ↗</a>
             <button class="btn btn--sm btn--ghost" data-dup>Kopyala</button>
             <a class="btn btn--sm" href="#model=${encodeURIComponent(g.id)}">Düzenle</a>
           </div>
@@ -341,16 +419,19 @@
       }).join("") || `<p class="note">Eşleşen model yok.</p>`;
     };
     $("#q").addEventListener("input", draw); $("#fc").addEventListener("change", draw); draw();
+    let busy = false;
     $("#list").onclick = async (e) => {
-      const it = e.target.closest(".item"); if (!it) return;
+      const it = e.target.closest(".item"); if (!it || busy) return;
       const i = +it.dataset.i, list = clone(G);
       if (e.target.closest("[data-up]")) [list[i - 1], list[i]] = [list[i], list[i - 1]];
       else if (e.target.closest("[data-down]")) [list[i + 1], list[i]] = [list[i], list[i + 1]];
       else if (e.target.closest("[data-star]")) list[i].featured = !list[i].featured;
       else if (e.target.closest("[data-dup]")) { location.hash = `#yeni=${encodeURIComponent(G[i].id)}`; return; }
       else return;
-      try { await post("gowns", { gowns: list }); await reload(); renderList(); toast("Kaydedildi · site güncellendi"); }
+      busy = true;
+      try { await post("gowns", { gowns: list }); await reload(); renderList(); toast("Kaydedildi"); }
       catch (err) { toast(err.message, true); }
+      finally { busy = false; }
     };
   }
 
@@ -379,13 +460,13 @@
               <label class="f"><span>Model adı *</span><input class="in" name="name" value="${esc(g.name)}" required maxlength="60" placeholder="ör. Yakamoz"></label>
               <label class="f"><span>Model kodu</span><input class="in" name="no" value="${esc(g.no)}" maxlength="20"><small>Otomatik verilir, değiştirebilirsiniz.</small></label>
               <label class="f"><span>Koleksiyon *</span><select class="sel" name="collection">${DB.collections.map((c) => `<option value="${c.id}" ${g.collection === c.id ? "selected" : ""}>${esc(c.name.tr || c.name.en)}</option>`).join("")}</select></label>
-              <label class="f"><span>Başlangıç fiyatı (USD) *</span><input class="in" name="price" type="number" min="0" step="10" value="${esc(g.price)}" placeholder="ör. 1290"><small>Etsy'deki fiyatla aynı ya da daha yüksek olmalı.</small></label>
+              <label class="f"><span>Başlangıç fiyatı — dolar (USD) *</span>${moneyInput("price", g.price || "")}<small>Sadece rakam, dolar olarak (ör. 1290). Etsy'deki fiyatla aynı ya da daha yüksek olmalı.</small></label>
               <div class="f full"><span>Adın anlamı <em>(isteğe bağlı)</em></span>${bi("meaning", g.meaning, { ph: { tr: "ör. denizde ay parıltısı", en: "e.g. moonlight on the sea" } })}</div>
             </div>
           </section>
 
           <section class="card">
-            <h2>Fotoğraflar *</h2><p class="hint">İlk fotoğraf kapaktır; ikincisi, fareyle üzerine gelince görünen (arka görünüm için ideal). Sürükleyerek ya da oklarla sıralayın. En az 3 fotoğraf önerilir: ön, arka, detay.</p>
+            <h2>Fotoğraflar *</h2><p class="hint">İlk fotoğraf kapaktır (★ ile istediğiniz fotoğrafı kapak yapın). İkincisi, bilgisayarda fotoğrafın üzerine gelince görünür — arka görünüm için ideal. Oklarla ya da sürükleyerek sıralayın. En az 3 fotoğraf önerilir: ön, arka, detay.</p>
             <div id="photos"></div>
           </section>
 
@@ -416,7 +497,7 @@
           <section class="card">
             <h2>Satış</h2><p class="hint">Etsy'de bu modelin ilanını açın ve linkini yapıştırın (Etsy › ilan › Paylaş › "Share & Save" linki önerilir — %4 ücret iadesi). Boşsa buton mağaza ana sayfasına gider.</p>
             <div class="grid2">
-              <label class="f full"><span>Etsy ilan linki</span><input class="in" name="etsy" type="url" value="${esc(g.etsy)}" placeholder="https://www.etsy.com/listing/…"></label>
+              <label class="f full"><span>Etsy ilan linki</span><input class="in" name="etsy" type="url" inputmode="url" autocapitalize="off" value="${esc(g.etsy)}" placeholder="https://www.etsy.com/listing/…"><small class="err-text" id="etsy-err" hidden>Bu bir Etsy ilan linki değil. Etsy'de ilanı açın › Paylaş › linki kopyalayıp buraya yapıştırın.</small></label>
               <label class="check"><input type="checkbox" name="featured" ${g.featured ? "checked" : ""}> Ana sayfada öne çıkar ★</label>
               <label class="check full"><input type="checkbox" name="draft" ${g.draft ? "checked" : ""}> Taslak — sitede gösterme <small style="display:block;color:var(--mute);margin-left:26px">Instagram'dan aktarılan modeller taslak olarak gelir. Bilgileri kontrol edip bu kutuyu kaldırınca model yayına girer.</small></label>
               <label class="check full"><input type="checkbox" name="concept" ${g.concept ? "checked" : ""}> Henüz dikilmedi — görseller çizim ya da görselleştirme <small style="display:block;color:var(--mute);margin-left:26px">Sitede “Tasarım · sipariş üzerine dikilir” etiketi ve açıklaması çıkar. Yapay zekâyla üretilmiş görsel kullanıyorsanız Etsy ilanında da belirtin.</small></label>
@@ -425,10 +506,10 @@
           <div class="savebar">
             <span class="msg">${isNew ? "Yeni model — henüz kaydedilmedi" : "Değişiklik yok"}</span>
             <div class="row">
-              ${isNew ? "" : `<button type="button" class="btn btn--danger" data-del>Modeli sil</button>`}
               <button type="submit" class="btn btn--ok">Kaydet</button>
             </div>
           </div>
+          ${isNew ? "" : `<p class="delzone"><button type="button" class="btn btn--sm btn--danger" data-del>Bu modeli sil</button> <small>Silinen model, Modeller sayfasının altındaki “Son silinen modeller”den geri getirilebilir.</small></p>`}
         </div>
         <aside class="editor__side card">
           <h2>Önizleme</h2>
@@ -442,10 +523,10 @@
       return {
         ...g,
         name: (fd.get("name") || "").trim(), no: (fd.get("no") || "").trim(), collection: fd.get("collection"),
-        price: Number(fd.get("price")) || 0, meaning: readBi(form, "meaning"), silhouette: fd.get("silhouette"), neckline: fd.get("neckline"),
+        price: parseMoney(fd.get("price")) ?? 0, meaning: readBi(form, "meaning"), silhouette: fd.get("silhouette"), neckline: fd.get("neckline"),
         features: fd.getAll("features"), fabric: readBi(form, "fabric"), hours: Number(fd.get("hours")) || 0,
         weeks: [Number(fd.get("w0")) || 8, Number(fd.get("w1")) || Number(fd.get("w0")) || 12],
-        story: readBi(form, "story"), etsy: (fd.get("etsy") || "").trim(), featured: fd.get("featured") === "on", concept: fd.get("concept") === "on", draft: fd.get("draft") === "on", images: g.images,
+        story: readBi(form, "story"), etsy: normUrl(fd.get("etsy")), featured: fd.get("featured") === "on", concept: fd.get("concept") === "on", draft: fd.get("draft") === "on", images: g.images,
         model: { height: Number(fd.get("modelH")) || 0, size: (fd.get("modelS") || "").trim() }
       };
     };
@@ -472,26 +553,25 @@
       const msg = $(".savebar .msg");
       const fail = (t, el) => { msg.textContent = t; msg.classList.add("err"); toast(t, true); el?.focus(); };
       if (!x.name) return fail("Model adı gerekli", form.elements.name);
+      if (Number.isNaN(x.price)) return fail("Fiyat okunamadı — dolar olarak, sadece rakamla yazın (ör. 1290)", form.elements.price);
+      if (x.etsy && !ETSY.test(x.etsy)) { $("#etsy-err").hidden = false; return fail("Etsy linki geçersiz", form.elements.etsy); }
+      $("#etsy-err").hidden = true;
+      if (x.no && DB.gowns.some((o) => o.no === x.no && o.id !== g.id)) return fail(`${x.no} kodu başka bir modelde kullanılıyor`, form.elements.no);
+      if (x.price > 0 && x.price < 100 && !confirm(`Fiyat ${money(x.price)} olarak kaydedilecek. Doğru mu? (Fiyatlar dolar olarak yazılır.)`)) return fail("Fiyatı kontrol edin", form.elements.price);
       if (!x.draft && !(x.price > 0)) return fail("Fiyat girin (taslak olarak kaydetmek için \"Taslak\" kutusunu işaretleyin)", form.elements.price);
       if (!x.images.length) return fail("En az bir fotoğraf ekleyin");
-      if (isNew) {
-        let idc = slug(x.name) || "model", n = 2;
-        while (DB.gowns.some((o) => o.id === idc)) idc = `${slug(x.name)}-${n++}`;
-        x.id = idc;
-      }
-      const list = clone(DB.gowns);
-      if (isNew) list.push(x); else list[list.findIndex((o) => o.id === g.id)] = x;
+      if (isNew) x.id = "";
       try {
         const btn = $("button[type=submit]", form); btn.disabled = true; btn.textContent = "Kaydediliyor…";
-        await post("gowns", { gowns: list });
+        await post("gown", { gown: x, id: isNew ? "" : g.id, base: isNew ? "" : DB.ver.g[g.id] });
         dirty = false; await reload();
-        toast(`"${x.name}" kaydedildi · site güncellendi`);
+        toast(`"${x.name}" kaydedildi`);
         location.hash = "#modeller";
       } catch (err) { fail(err.message); const btn = $("button[type=submit]", form); btn.disabled = false; btn.textContent = "Kaydet"; }
     });
     $("[data-del]", form)?.addEventListener("click", async () => {
-      if (!confirm(`"${g.name}" modeli siteden silinsin mi? Bu işlem geri alınabilir: .yedek klasöründe yedek tutulur.`)) return;
-      try { await post("gowns", { gowns: DB.gowns.filter((o) => o.id !== g.id) }); dirty = false; await reload(); toast("Model silindi"); location.hash = "#modeller"; }
+      if (!confirm(`"${g.name}" modeli siteden silinsin mi?\n\nFikrinizi değiştirirseniz Modeller sayfasının altındaki "Son silinen modeller"den geri getirebilirsiniz.`)) return;
+      try { await post("gown-delete", { id: g.id, base: DB.ver.g[g.id] }); dirty = false; await reload(); toast("Model silindi — Modeller sayfasının altından geri getirebilirsiniz"); location.hash = "#modeller"; }
       catch (err) { toast(err.message, true); }
     });
   }
@@ -506,7 +586,7 @@
     while (d.highlights.length < 3) d.highlights.push({ value: "", label: {} });
     view.innerHTML = `
       <div class="head">
-        <div><h1>Tasarımcı sayfası</h1><p>Burak'ın tanıtım sayfası. Boş bıraktığınız alanlar sitede görünmez; sayfa yarım dolu haliyle de düzgün görünür.</p><div class="meter"><i id="meter"></i></div></div>
+        <div><h1>Tasarımcı sayfası</h1><p>Tasarımcının tanıtım sayfası. Boş bıraktığınız alanlar sitede görünmez; sayfa yarım dolu haliyle de düzgün görünür.</p><div class="meter"><i id="meter"></i></div></div>
         <a class="btn btn--ghost" href="/designer.html" target="_blank" rel="noopener">Sayfayı gör ↗</a>
       </div>
       <form id="df" novalidate>
@@ -529,7 +609,7 @@
           ${bi("bio", d.bio, { ta: true, lg: true })}
         </section>
         <section class="card">
-          <h2>Alıntı</h2><p class="hint">Burak'ın kendi sözü — sayfada büyük harflerle öne çıkar.</p>
+          <h2>Alıntı</h2><p class="hint">Tasarımcının kendi sözü — sayfada büyük harflerle öne çıkar.</p>
           ${bi("quote", d.quote, { ta: true, ph: { tr: "ör. Her gelinlik, giyecek kadının hikâyesiyle başlar.", en: "e.g. Every gown begins with the story of the woman who will wear it." } })}
         </section>
         <section class="card">
@@ -550,7 +630,7 @@
         name: fd.get("name"), since: fd.get("since"), title: readBi(form, "title"), intro: readBi(form, "intro"), bio: readBi(form, "bio"), quote: readBi(form, "quote"),
         photo: photo[0] || "", photo2: photo2[0] || "",
         highlights: d.highlights.map((h, i) => ({ value: $(`[data-hv="${i}"]`).value.trim(), label: readBi(form, `hl${i}`) })),
-        press: $$("[data-pn]").map((el) => ({ name: el.value.trim(), url: $(`[data-pu="${el.dataset.pn}"]`).value.trim() }))
+        press: $$("[data-pn]").map((el) => ({ name: el.value.trim(), url: normUrl($(`[data-pu="${el.dataset.pn}"]`).value) }))
       };
     };
     const meter = () => {
@@ -568,8 +648,9 @@
     });
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      const btn = $("button[type=submit]", form); btn.disabled = true;
       try { await post("designer", { designer: collect() }); dirty = false; await reload(); toast("Tasarımcı sayfası kaydedildi"); renderDesigner(); }
-      catch (err) { toast(err.message, true); }
+      catch (err) { toast(err.message, true); btn.disabled = false; }
     });
     meter();
   }
@@ -615,7 +696,7 @@
       if (e.target.closest("[data-add]")) { DB.reviews = collect().concat({ name: "", gown: "", place: {}, text: {} }); renderReviews(); markDirty(); $$("[data-r]").pop()?.scrollIntoView(); return; }
       const card = e.target.closest("[data-r]"); if (!card) return;
       const i = +card.dataset.r, list = collect();
-      if (e.target.closest("[data-rrm]")) list.splice(i, 1);
+      if (e.target.closest("[data-rrm]")) { if (!confirm(`${list[i].name || "Bu"} yorumu silinsin mi? (Kaydet'e basmadan önce sayfayı yenilerseniz geri gelir.)`)) return; list.splice(i, 1); }
       else if (e.target.closest("[data-rup]")) [list[i - 1], list[i]] = [list[i], list[i - 1]];
       else if (e.target.closest("[data-rdown]")) [list[i + 1], list[i]] = [list[i], list[i + 1]];
       else return;
@@ -623,8 +704,12 @@
     };
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      try { const r = collect(); await post("reviews", { reviews: r }); dirty = false; await reload(); toast(`${DB.reviews.length} yorum kaydedildi`); renderReviews(); }
-      catch (err) { toast(err.message, true); }
+      const r = collect();
+      const half = r.findIndex((x) => (x.name || x.text.tr || x.text.en || x.photo) && !(x.name && (x.text.tr || x.text.en)));
+      if (half >= 0) { const c = $$("[data-r]")[half]; c.scrollIntoView({ block: "center" }); toast(`${half + 1}. yorumda ${r[half].name ? "yorum metni" : "gelinin adı"} eksik — doldurun ya da yorumu silin`, true); return; }
+      const btn = $("button[type=submit]", form); btn.disabled = true;
+      try { await post("reviews", { reviews: r.filter((x) => x.name) }); dirty = false; await reload(); toast(`${DB.reviews.length} yorum kaydedildi`); renderReviews(); }
+      catch (err) { toast(err.message, true); btn.disabled = false; }
     });
   }
 
@@ -639,11 +724,11 @@
       <form id="sf" novalidate>
         <section class="card"><h2>İletişim</h2>
           <div class="grid2">
-            ${fld("whatsapp", "WhatsApp numarası", S.whatsapp, { hint: "Ülke koduyla, boşluksuz: 905417169862" })}
+            ${fld("whatsapp", "WhatsApp numarası", S.whatsapp, { type: "tel", hint: "Nasıl isterseniz yazın (0541 716 98 62 ya da +90 541…) — doğru biçime kendisi çevrilir." })}
             ${fld("phoneDisplay", "Telefon (görünen hali)", S.phoneDisplay, { ph: "+90 541 716 98 62" })}
             ${fld("email", "E-posta", S.email, { type: "email" })}
             ${fld("etsyShop", "Etsy mağaza linki", S.etsyShop, { type: "url" })}
-            ${fld("instagram", "Instagram (atölye) linki", S.instagram, { type: "url" })}
+            ${fld("instagram", "Instagram (atölye) linki", S.instagram, { type: "url", hint: "Link ya da @kullanıcıadı yazabilirsiniz." })}
             ${fld("instagramHandle", "Instagram kullanıcı adı", S.instagramHandle, { ph: "@burakaltas_atelier" })}
             ${fld("instagramStudio", "Yeni (influencer) Instagram hesabı", S.instagramStudio, { type: "url", ph: "https://www.instagram.com/…" })}
             ${fld("mapsUrl", "Google Haritalar linki", S.mapsUrl, { type: "url" })}
@@ -656,23 +741,23 @@
             <label class="f"><span>İlk görüşme saati</span><input class="in" name="start" type="number" min="0" max="23" value="${A.start}"></label>
             <label class="f"><span>Son görüşme bitiş saati</span><input class="in" name="end" type="number" min="1" max="24" value="${A.end}"></label>
             <div class="f full"><span>Görüşme günleri</span><div class="chips">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<label class="chip"><input type="checkbox" name="days" value="${d}" ${A.days.includes(d) ? "checked" : ""}><span>${DAYS[d]}</span></label>`).join("")}</div></div>
-            ${fld("calcomUser", "Cal.com kullanıcı adı (isteğe bağlı)", A.calcomUser, { hint: "Doldurursanız gelinler takvimden kendileri rezervasyon yapar (README'de kurulum adımları). Boşsa talepler WhatsApp'a gelir." })}
+            ${fld("calcomUser", "Cal.com kullanıcı adı (isteğe bağlı · kurulumu Alim yapar)", A.calcomUser, { hint: "Doldurulursa gelinler takvimden kendileri randevu alır. Boşsa randevu talepleri WhatsApp'a gelir." })}
           </div>
         </section>
         <section class="card"><h2>Kişiselleştirme ücretleri (USD)</h2><p class="hint">Model sayfasındaki "Size özel olsun" seçeneklerinin yanında görünür ve seçildikçe fiyat güncellenir. <b>Boş bırakın</b> = ücret gösterilmez · <b>0</b> = "ücretsiz" yazar · <b>sayı</b> = "+$120" gibi gösterilir.</p>
           <div class="grid2">
-            ${[["colour", "Renk değişikliği (fildişi dışında)"], ["sleevesLong", "Uzun kol ekleme"], ["sleevesDetachable", "Takılıp çıkarılabilir kol"], ["trainShorter", "Daha kısa kuyruk"], ["trainCathedral", "Katedral boy kuyruk"], ["neckHigher", "Daha kapalı yaka"], ["neckIllusion", "Tül (illüzyon) yaka"]].map(([k, label]) => `<label class="f"><span>${label}</span><input class="in" name="ex_${k}" type="number" min="0" step="10" value="${(S.extras || {})[k] ?? ""}" placeholder="boş = gösterme"></label>`).join("")}
+            ${[["colour", "Renk değişikliği (fildişi dışında)"], ["sleevesLong", "Uzun kol ekleme"], ["sleevesDetachable", "Takılıp çıkarılabilir kol"], ["trainShorter", "Daha kısa kuyruk"], ["trainCathedral", "Katedral boy kuyruk"], ["neckHigher", "Daha kapalı yaka"], ["neckIllusion", "Tül (illüzyon) yaka"]].map(([k, label]) => `<label class="f"><span>${label}</span>${moneyInput(`ex_${k}`, (S.extras || {})[k] ?? "", { ph: "boş = gösterme" })}</label>`).join("")}
           </div>
-          <label class="f" style="margin-top:14px"><span>Kargo ücreti (USD)</span><input class="in" name="shipping" type="number" min="0" step="5" value="${Number.isFinite(S.shipping) ? S.shipping : ""}" placeholder="boş = teklifte netleşir"><small>Model sayfasında “Takipli, sigortalı kargo: $X” yazar. Boş bırakılırsa “kargo teklifte netleşir” yazar; 0 = ücretsiz.</small></label>
+          <label class="f" style="margin-top:14px"><span>Kargo ücreti (USD)</span>${moneyInput("shipping", Number.isFinite(S.shipping) ? S.shipping : "", { ph: "boş = teklifte netleşir" })}<small>Model sayfasında “Takipli, sigortalı kargo: $X” yazar. Boş bırakılırsa “kargo teklifte netleşir” yazar; 0 = ücretsiz.</small></label>
         </section>
-        <section class="card"><h2>Canlı sohbet</h2><p class="hint">Ücretsiz Tawk.to hesabı açın (README'de adımlar). Sonra tawk.to › Administration › Chat Widget bölümündeki embed kodunda geçen adresi (https://embed.tawk.to/…) olduğu gibi aşağıya yapıştırın. Boş bırakırsanız sitede yalnızca WhatsApp butonu görünür. Mesajlara Tawk.to'nun telefon uygulamasından cevap verirsiniz.</p>
+        <section class="card"><h2>Canlı sohbet <em class="tech">kurulumu Alim yapar</em></h2><p class="hint">Ücretsiz Tawk.to hesabı açın (README'de adımlar). Sonra tawk.to › Administration › Chat Widget bölümündeki embed kodunda geçen adresi (https://embed.tawk.to/…) olduğu gibi aşağıya yapıştırın. Boş bırakırsanız sitede yalnızca WhatsApp butonu görünür. Mesajlara Tawk.to'nun telefon uygulamasından cevap verirsiniz.</p>
           <div class="grid2">
             ${fld("tawkPropertyId", "Tawk.to adresi ya da Property ID", (S.chat || {}).tawkPropertyId ? `https://embed.tawk.to/${S.chat.tawkPropertyId}/${S.chat.tawkWidgetId || "default"}` : "", { full: true, ph: "https://embed.tawk.to/65xxxxxxxxxxxxxxxxxx/1hxxxxxxx" })}
             ${fld("tawkWidgetTr", "Türkçe widget ID (isteğe bağlı)", (S.chat || {}).tawkWidgetTr, { hint: "Türkçe ziyaretçilere ayrı bir (Türkçe) sohbet penceresi göstermek isterseniz." })}
             <p class="note full">${(S.chat || {}).tawkPropertyId ? "✓ Canlı sohbet açık." : "Canlı sohbet şu an kapalı."}</p>
           </div>
         </section>
-        <section class="card"><h2>Ziyaretçi istatistikleri</h2><p class="hint">Ücretsiz ve çerezsiz Cloudflare Web Analytics: kaç kişinin geldiğini, hangi ülkelerden ve hangi sayfalara baktığını gösterir; çerez bildirimi gerektirmez. Cloudflare › Analytics &amp; Logs › Web Analytics › siteyi ekleyin, size verilen kodu (ya da token'ı) aşağıya yapıştırın.</p>
+        <section class="card"><h2>Ziyaretçi istatistikleri <em class="tech">kurulumu Alim yapar</em></h2><p class="hint">Ücretsiz ve çerezsiz Cloudflare Web Analytics: kaç kişinin geldiğini, hangi ülkelerden ve hangi sayfalara baktığını gösterir; çerez bildirimi gerektirmez. Cloudflare › Analytics &amp; Logs › Web Analytics › siteyi ekleyin, size verilen kodu (ya da token'ı) aşağıya yapıştırın.</p>
           <div class="grid2">
             ${fld("cfToken", "Web Analytics token'ı ya da kodu", (S.analytics || {}).cloudflareToken, { full: true, ph: "ör. 0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d" })}
             <p class="note full">${(S.analytics || {}).cloudflareToken ? "✓ İstatistikler açık." : "İstatistikler şu an kapalı."}</p>
@@ -695,12 +780,34 @@
       site.hours = readBi(form, "hours"); site.showPrices = fd.get("showPrices") === "on";
       site.appointments = { start: +fd.get("start"), end: +fd.get("end"), days: fd.getAll("days").map(Number), calcomUser: (fd.get("calcomUser") || "").trim() };
       site.analytics = { cloudflareToken: (fd.get("cfToken") || "").trim() };
-      site.extras = Object.fromEntries(["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral", "neckHigher", "neckIllusion"].map((k) => [k, fd.get(`ex_${k}`)]));
-      site.shipping = fd.get("shipping");
+      site.extras = Object.fromEntries(["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral", "neckHigher", "neckIllusion"].map((k) => [k, parseMoney(fd.get(`ex_${k}`))]));
+      site.shipping = parseMoney(fd.get("shipping"));
+      const bad = (name, t) => { toast(t, true); const el = form.elements[name]; el.focus(); el.scrollIntoView({ block: "center" }); };
+      if ([site.shipping, ...Object.values(site.extras)].some((v) => Number.isNaN(v))) {
+        const k = ["shipping", ...Object.keys(site.extras).map((x) => `ex_${x}`)].find((n) => Number.isNaN(parseMoney(fd.get(n))));
+        return bad(k, "Ücretler dolar olarak, sadece rakamla yazılır (ör. 120)");
+      }
+      // phone: 0541… / +90 541… / 0090… → 905417169862
+      let wa = site.whatsapp.replace(/\D/g, "");
+      if (wa.startsWith("00")) wa = wa.slice(2);
+      if (/^0[1-9]\d{9}$/.test(wa)) wa = "90" + wa.slice(1);
+      if (/^5\d{9}$/.test(wa)) wa = "90" + wa;
+      if (!/^\d{10,15}$/.test(wa)) return bad("whatsapp", "WhatsApp numarası okunamadı — ör. 0541 716 98 62");
+      site.whatsapp = wa;
+      if (site.email && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(site.email)) return bad("email", "E-posta adresi eksik görünüyor (ör. ad@alanadi.com)");
+      const h = site.instagram.match(/^@?([\w.]{2,30})$/);
+      if (h) site.instagram = `https://www.instagram.com/${h[1]}/`;
+      for (const k of ["etsyShop", "instagram", "instagramStudio", "mapsUrl", "domain"]) {
+        if (!site[k]) continue;
+        site[k] = normUrl(site[k]);
+        if (!/^https:\/\/[^\s"'<>]+\.[^\s"'<>]+$/.test(site[k])) return bad(k, "Bu link geçersiz görünüyor");
+      }
+      site.domain = site.domain.replace(/\/+$/, "");
       site.chat = { tawkPropertyId: (fd.get("tawkPropertyId") || "").trim(), tawkWidgetTr: (fd.get("tawkWidgetTr") || "").trim() };
       if (site.appointments.end <= site.appointments.start) { toast("Bitiş saati başlangıçtan sonra olmalı", true); return; }
+      const btn = $("button[type=submit]", form); btn.disabled = true;
       try { await post("config", { site }); dirty = false; await reload(); toast("Ayarlar kaydedildi"); renderSettings(); }
-      catch (err) { toast(err.message, true); }
+      catch (err) { toast(err.message, true); btn.disabled = false; }
     });
   }
 
@@ -709,7 +816,8 @@
      ====================================================================== */
   /* ---------- Launch readiness: what still stands between the site and going live ---------- */
   const CHECKS_KEY = "ba-admin-checks";
-  const manual = () => { try { return JSON.parse(localStorage.getItem(CHECKS_KEY) || "{}"); } catch { return {}; } };
+  // ticks live on the panel computer, so phone and computer see the same list (old browser ticks are carried over once)
+  const manual = () => { let old = {}; try { old = JSON.parse(localStorage.getItem(CHECKS_KEY) || "{}"); } catch {} return { ...old, ...(DB.checks || {}) }; };
   function readiness() {
     const S = DB.site, live = DB.gowns.filter((g) => !g.draft), drafts = DB.gowns.length - live.length, m = manual();
     const n = (arr) => arr.length, names = (arr) => arr.slice(0, 4).map((g) => g.name).join(", ") + (arr.length > 4 ? "…" : "");
@@ -729,16 +837,16 @@
       ]],
       ["İçerik", [
         { st: ok(!sampleReviews), t: "Gelin yorumları", d: sampleReviews ? "Örnek yorumlar (Elif, Sarah, Layla, Anna) duruyor — izin alarak gerçekleriyle değiştirin" : "Gerçek yorumlar girilmiş", go: "#yorumlar" },
-        { st: ok(designerOk), t: "Tasarımcı sayfası", d: designerOk ? "Portre ve hikâye girilmiş" : "Burak'ın portresi ve hikâyesi eksik — sayfa şu an boş görünüyor", go: "#tasarimci" }
+        { st: ok(designerOk), t: "Tasarımcı sayfası", d: designerOk ? "Portre ve hikâye girilmiş" : "Tasarımcı portresi ve hikâyesi eksik — sayfa menüde görünmüyor", go: "#tasarimci" }
       ]],
       ["Bilgiler — elle teyit", [
         { k: "email", t: "E-posta adresi", d: `${S.email} — alan adı alınınca bu adres kurulmalı ya da gerçek adres yazılmalı`, go: "#ayarlar" },
         { k: "etsy", t: "Etsy mağaza linki", d: S.etsyShop, go: "#ayarlar" },
         { k: "domain", t: "Alan adı", d: `${S.domain} — satın alındı ve bu adres doğru`, go: "#ayarlar" },
-        { k: "policies", t: "Gizlilik & koşullar sayfası Burak ile okundu", d: "İade/tadilat, verilerin saklanma süresi, üretim ve kargo süreleri" },
+        { k: "policies", t: "Gizlilik & koşullar sayfası okundu ve onaylandı", d: "İade/tadilat, verilerin saklanma süresi, üretim ve kargo süreleri" },
         { k: "measure", t: "Ölçü kartı ifadeleri teyit edildi", d: "Bolluk payı, topuk yüksekliği, \"2 kg / 2 cm değişirse yeniden ölçün\"" },
         { k: "numbers", t: "Ana sayfadaki rakamlar teyit edildi", d: "Örn. işçilik saatleri ve inci sayıları" },
-        { k: "consent", t: "Gerçek gelin fotoğrafları için izin alındı", d: "Site ve Instagram için yazılı onay (KVKK)" },
+        { k: "consent", t: "Gerçek gelin fotoğrafları için izin alındı", d: "Site ve Instagram için gelinden yazılı onay (kişisel veriler kanunu gereği)" },
         { k: "payment", t: "Ödeme, iptal ve iade kargosu yazıldı", d: "Etsy'de ödemenin tamamı mı alınıyor, kesimden önce iptal olursa ne olur, atölye hatasında geri gönderim kargosunu kim öder — gelinler en çok bunu sordu (Gizlilik & koşullar sayfası)" },
         { k: "callfees", t: "Ölçü ve prova görüşmelerinin ücreti netleşti", d: "\"Siparişe dahil\" mi? Şu an yalnızca tasarım görüşmesi \"ücretsiz\" yazıyor" },
         { k: "privacy", t: "Fotoğraf ve görüşme gizliliği yazıldı", d: "Vücut fotoğraflarını kim görüyor, görüntülü görüşmeler kaydediliyor mu, fotoğraflar asla paylaşılmaz mı" },
@@ -771,21 +879,20 @@
 
   function renderPublish() {
     view.innerHTML = `
-      <div class="head"><div><h1>Yayınla</h1><p>Panelde yaptığınız her şey bu bilgisayarda kayıtlı. İnternetteki siteyi güncellemek için yayın klasörünü hazırlayıp Netlify'a yükleyin.</p></div></div>
+      <div class="head"><div><h1>Yayınla</h1><p>Kaydettiğiniz her şey hemen <a href="/" target="_blank" rel="noopener">önizleme sitesinde</a> görünür. İnternetteki gerçek site henüz açılmadı; açıldığında bu sayfadaki tek bir düğmeyle güncellenecek.</p></div></div>
       ${readiness()}
-      <section class="card">
+      ${DB.remote ? `<section class="card"><h2>Siteyi yayına almak</h2><p class="hint">Alan adı ve sunucu hazır olunca yayın, Alim'in bilgisayarından yapılır. Yukarıdaki listede eksik kalanları tamamlamanız yeterli.</p></section>` : `<section class="card">
         <ol class="steps">
           <li><b>Yayın klasörünü hazırlayın</b><p>Sadece sitenin dosyalarını içeren "yayin" klasörü oluşturulur (admin paneli ve notlar dahil edilmez).<br><button class="btn" data-pub style="margin-top:10px">Yayın klasörünü hazırla</button></p></li>
           <li><b>Klasörü açın</b><p><button class="btn btn--ghost" data-open style="margin-top:6px">"yayin" klasörünü göster</button></p></li>
-          <li><b>Netlify'a sürükleyin</b><p><a href="https://app.netlify.com/drop" target="_blank" rel="noopener">app.netlify.com/drop</a> adresini açın ve "yayin" klasörünü sayfaya sürükleyip bırakın. İlk seferden sonra: Netlify'da sitenizi açın › Deploys › klasörü "Drag and drop" alanına bırakın — adres aynı kalır.</p></li>
+          <li><b>Sunucuya yükleyin</b><p>Sunucu kurulunca bu adım otomatik olacak (deploy/README.md).</p></li>
         </ol>
         <p class="note" id="pubres" hidden></p>
-      </section>`;
+      </section>`}`;
     view.onchange = (e) => {
       const c = e.target.closest("[data-check]"); if (!c) return;
-      const m = manual(); m[c.dataset.check] = c.checked;
-      try { localStorage.setItem(CHECKS_KEY, JSON.stringify(m)); } catch {}
-      renderPublish();
+      c.disabled = true;
+      post("checks", { k: c.dataset.check, v: c.checked }).then((r) => { DB.checks = r.checks; renderPublish(); }).catch((err) => { toast(err.message, true); c.checked = !c.checked; c.disabled = false; });
     };
     view.onclick = async (e) => {
       if (e.target.closest("[data-pub]")) {
@@ -809,7 +916,7 @@
     try { return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(s, (c) => c.charCodeAt(0) & 255)); } catch { return s; }
   };
   const IG_DONE = "ba-ig-done";
-  const igDone = () => { try { return new Set(JSON.parse(localStorage.getItem(IG_DONE) || "[]")); } catch { return new Set(); } };
+  const igDone = () => { let old = []; try { old = JSON.parse(localStorage.getItem(IG_DONE) || "[]"); } catch {} return new Set([...old, ...DB.gowns.map((g) => g.ig).filter(Boolean), ...(DB.trash || []).map((t) => t.ig).filter(Boolean)]); };
   const markDone = (ids) => { try { localStorage.setItem(IG_DONE, JSON.stringify([...new Set([...igDone(), ...ids])])); } catch {} };
   // "Yakamoz 🤍 #gelinlik #bridal" → "Yakamoz"
   const GENERIC = /^(gelinli[kğ]\p{L}*|model\p{L}*|elbise\p{L}*|after|party|bridal|wedding|dress|gown|yeni|new)$/iu;
@@ -821,7 +928,7 @@
       .find(Boolean) || "";
     return words.slice(0, 40).trim() || `Instagram ${date ? date.toLocaleDateString("tr-TR") : ""}`.trim();
   };
-  const storyFrom = (caption) => caption.split("\n").map((l) => l.replace(/[#@][\p{L}\p{N}_.]+/gu, "").trim()).filter(Boolean).join(" ").replace(/\s{2,}/g, " ").slice(0, 1200);
+  const storyFrom = (caption) => caption.split("\n").map((l) => l.replace(/[#@][\p{L}\p{N}_.]+/gu, "").replace(/[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}\uFE0F\u200D]/gu, "").trim()).filter(Boolean).join(" ").replace(/\s{2,}/g, " ").slice(0, 1200);
 
   async function readExport(fileList) {
     const files = [...fileList];
@@ -845,7 +952,7 @@
         const images = found.filter((f) => /\.(jpe?g|png|webp)$/i.test(f.name));
         if (!images.length) continue;
         const ts = p.creation_timestamp || (media[0] && media[0].creation_timestamp) || 0;
-        posts.push({ id: `${ts}-${images[0].name}`, date: ts ? new Date(ts * 1000) : null, caption: fixText(p.title || (media[0] && media[0].title) || ""), images, videos: found.length - images.length });
+        posts.push({ id: `${ts}-${images[0].name}`.replace(/[^w.-]/g, "").slice(0, 80), date: ts ? new Date(ts * 1000) : null, caption: fixText(p.title || (media[0] && media[0].title) || ""), images, videos: found.length - images.length });
       }
     }
     return posts.sort((a, b) => (b.date || 0) - (a.date || 0));
@@ -862,6 +969,7 @@
           <li>Instagram birkaç saat içinde e-postayla indirme linki gönderir. Zip dosyasını indirip bir klasöre çıkarın.</li>
         </ol>
       </section>
+      <p class="note note--warn igphone" hidden>Bu adım telefonda yapılamaz (telefonlar klasör seçtirmiyor). Arşivi bilgisayarda açıp bu sayfayı bilgisayardan kullanın.</p>
       <section class="card">
         <h2>2. Klasörü seçin</h2>
         <label class="drop" tabindex="0">
@@ -872,6 +980,7 @@
         <div id="igres"></div>
       </section>`;
     const input = $("#igdir"), drop = $(".drop", view), res = $("#igres");
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent))) $(".igphone").hidden = false;
     drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
     input.addEventListener("change", async () => {
       if (!input.files.length) return;
@@ -902,7 +1011,7 @@
           return `<label class="igpost ${picked.has(p.id) ? "is-on" : ""}">
             <input type="checkbox" data-ig="${esc(p.id)}" ${picked.has(p.id) ? "checked" : ""}>
             <img src="${u}" alt="" loading="lazy">
-            <span class="igpost__meta">${p.date ? p.date.toLocaleDateString("tr-TR") : ""} · ${p.images.length} foto${p.videos ? ` · ${p.videos} video atlandı` : ""}${done.has(p.id) ? ` · <b>aktarıldı</b>` : ""}</span>
+            <span class="igpost__meta">${p.date ? p.date.toLocaleDateString("tr-TR") : ""} · ${p.images.length} foto${p.videos ? ` · ${p.videos} video atlandı` : ""}${done.has(p.id) ? ` · <b>aktarıldı</b>` : ""}${DB.gowns.some((g) => slug(g.name) === slug(nameFrom(p.caption, p.date))) ? ` · <b>bu adla model var</b>` : ""}</span>
             <span class="igpost__cap">${esc(p.caption.slice(0, 140)) || "<i>açıklama yok</i>"}</span>
           </label>`;
         }).join("") || `<p class="note">Eşleşen gönderi yok.</p>`;
@@ -938,7 +1047,7 @@
             while (ids.has(id)) id = `${slug(name) || "model"}-${i++}`;
             ids.add(id);
             drafts.push({ id, no: prefix + String(n++).padStart(2, "0"), name, collection, meaning: {}, silhouette: collection === "afterparty" ? "mini" : "aline", neckline: "strapless",
-              features: [], fabric: {}, hours: 0, price: 0, weeks: [8, 12], etsy: "", images, story: { tr: storyFrom(p.caption), en: "" }, draft: true });
+              features: [], fabric: {}, hours: 0, price: 0, weeks: [8, 12], etsy: "", images, story: { tr: storyFrom(p.caption), en: "" }, draft: true, ig: p.id });
           }
           if (!drafts.length) throw new Error("Hiç fotoğraf yüklenemedi");
           await post("gowns", { gowns: [...DB.gowns, ...drafts] });

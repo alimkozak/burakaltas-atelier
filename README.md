@@ -38,7 +38,7 @@ Panel kaydettiğiniz anda siteyi günceller: model sayfaları, paylaşım önizl
 **`Burak'a Admin Paneli.bat`** dosyasına çift tıklayın. 10–20 saniye içinde pencerede bir **link** ve bir **şifre** çıkar. İkisi birlikte panoya kopyalanır; WhatsApp'tan Burak'a yapıştırın.
 
 - **Telefondan da çalışır.** Burak linki açar, şifreyi girer ve paneli sizin gibi kullanır: model ekleme, fotoğraf ve video yükleme, ayarlar, yayınlama.
-- **Şifre her açılışta yeniden üretilir.** Pencere kapanınca link de şifre de geçersiz olur. Sekiz hatalı denemeden sonra o bağlantıdan 15 dakika giriş yapılamaz.
+- **Link her açılışta değişir, şifre aynı kalır.** Pencere kapanınca link çalışmaz; yeniden açınca yeni linki gönderin. Burak bir kez giriş yapınca 2 hafta şifre sorulmaz. Şifreyi değiştirmek için `.yedek\admin-sifre.txt` dosyasını silin. Sekiz hatalı denemeden sonra o bağlantıdan 15 dakika giriş yapılamaz.
 - **Uzaktan yalnızca panel ve site açılır.** README, betikler ve yedekler kapalıdır. "Klasörü göster" düğmesi yalnızca sizin bilgisayarınızda çalışır.
 - **Aynı anda çalışabilirsiniz.** Siz kendi panelinizi (`Admin Paneli.bat`) açık tutarken Burak uzaktan çalışabilir. İkiniz aynı anda kaydederseniz panel bunu fark eder: ikinci kaydı reddeder, "Bu arada başka biri de kaydetti, sayfayı yenileyin" der. Kimsenin işi sessizce silinmez.
 - **Değişiklikler gerçek dosyalara yazılır.** Burak'ın panelde yaptığı her şey sizin bilgisayarınızdaki siteyi değiştirir. Yanlışlık olursa eski hali `.yedek` klasöründedir; Git kullanıyorsanız `git diff` ile de görebilirsiniz.

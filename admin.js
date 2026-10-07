@@ -167,7 +167,9 @@ function cleanGown(g, collections) {
     features: [...new Set(g.features || [])].filter((f) => VOCAB.features.includes(f)),
     fabric: bi(g.fabric, 200), hours: Math.max(0, Number(g.hours) || 0), price: Math.max(0, Number(g.price) || 0),
     weeks: [Math.max(1, w[0] || 8), Math.max(1, w[1] || w[0] || 12)],
-    etsy: /^https:\/\/(www\.)?(etsy\.com|etsy\.me)\//.test(str(g.etsy)) ? str(g.etsy, 500) : "",
+    etsy: /^https:\/\/([\w-]+\.)?(etsy\.com|etsy\.me)\//.test(normUrl(g.etsy)) ? normUrl(g.etsy) : "",
+    // Instagram post it was imported from (so the importer knows it on every device)
+    ...(/^[\w.-]{1,80}$/.test(str(g.ig)) ? { ig: str(g.ig) } : {}),
     images, story: bi(g.story, 1200), ...(g.featured ? { featured: true } : {}),
     // Not made yet: the photos are sketches / renders and the gown is sewn for the first bride who orders it
     ...(g.concept ? { concept: true } : {}),
@@ -190,28 +192,88 @@ const cleanExtras = (o = {}) => Object.fromEntries(EXTRA_KEYS.map((k) => {
 
 /* ---------- Two people editing at once ----------
    Every save carries the version of the file it was based on. If someone else saved in the
-   meantime, the save is refused instead of silently overwriting their work. */
-const hashFile = (rel) => { try { return crypto.createHash("sha1").update(fs.readFileSync(path.join(ROOT, rel))).digest("hex").slice(0, 12); } catch { return ""; } };
-const versions = () => ({ data: hashFile("assets/js/data.js"), config: hashFile("assets/js/config.js") });
-const VERSIONED = { gowns: "data", designer: "data", reviews: "data", config: "config" };
+   meantime, the save is refused instead of silently overwriting their work.
+   Versions are kept per section (and per gown), so saving a review never blocks someone who is
+   editing a gown, and two people editing two different gowns never block each other. */
+const hash = (v) => crypto.createHash("sha1").update(typeof v === "string" ? v : JSON.stringify(v ?? null)).digest("hex").slice(0, 12);
+const hashFile = (rel) => { try { return hash(fs.readFileSync(path.join(ROOT, rel), "utf8")); } catch { return ""; } };
+const versions = (W) => ({
+  gowns: hash(W.GOWNS), designer: hash(W.DESIGNER || {}), reviews: hash(W.REVIEWS || []), config: hashFile("assets/js/config.js"),
+  g: Object.fromEntries((W.GOWNS || []).map((g) => [g.id, hash(g)]))
+});
+const VERSIONED = { gowns: "gowns", designer: "designer", reviews: "reviews", config: "config" };
+
+/* ---------- Deleted gowns can be brought back from the panel ---------- */
+const TRASH = path.join(ROOT, ".yedek", "silinen-modeller.json");
+const readTrash = () => { try { const t = JSON.parse(fs.readFileSync(TRASH, "utf8")); return Array.isArray(t) ? t : []; } catch { return []; } };
+const writeTrash = (t) => { fs.mkdirSync(path.dirname(TRASH), { recursive: true }); writeAtomic(TRASH, JSON.stringify(t.slice(0, 20), null, 1)); };
+
+/* ---------- Launch checklist ticks, shared by every device ---------- */
+const CHECKS = path.join(ROOT, "admin", "hazirlik.json");
+const readChecks = () => { try { return JSON.parse(fs.readFileSync(CHECKS, "utf8")) || {}; } catch { return {}; } };
+
+/* Phone numbers typed the Turkish way ("0541 716 98 62", "0090 541…", "541 716 98 62") → 905417169862 */
+const normWhatsapp = (v) => {
+  let d = str(v, 30).replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  if (/^0[1-9]\d{9}$/.test(d)) d = "90" + d.slice(1);
+  if (/^5\d{9}$/.test(d)) d = "90" + d;
+  return /^\d{10,15}$/.test(d) ? d : "";
+};
+const normUrl = (v) => { let s = str(v, 500).trim(); if (!s) return ""; if (/^http:\/\//i.test(s)) s = "https://" + s.slice(7); if (!/^https:\/\//i.test(s)) s = "https://" + s.replace(/^\/+/, ""); return /^https:\/\/[^\s"'<>]+\.[^\s"'<>]+$/i.test(s) ? s : ""; };
 
 /* ---------- API ---------- */
 async function api(req, res, route, remote) {
   const W = loadSite();
   if (req.method === "GET" && route === "data") {
-    return send(res, 200, { site: W.SITE, collections: W.COLLECTIONS, gowns: W.GOWNS, media: W.MEDIA, reviews: W.REVIEWS || [], designer: W.DESIGNER || {}, ver: versions(), remote });
+    return send(res, 200, { site: W.SITE, collections: W.COLLECTIONS, gowns: W.GOWNS, media: W.MEDIA, reviews: W.REVIEWS || [], designer: W.DESIGNER || {}, ver: versions(W), remote,
+      trash: readTrash().map((t) => ({ id: t.gown.id, name: t.gown.name, no: t.gown.no, image: t.gown.images[0], date: t.date, ig: t.gown.ig })), checks: readChecks() });
   }
   if (req.method !== "POST") return send(res, 405, { error: "Yöntem desteklenmiyor" });
   // Videos are streamed straight to disk (too big to send as JSON)
   if (route === "upload-video") return uploadVideo(req, res);
   const body = await readBody(req);
   const vk = VERSIONED[route];
-  if (vk && (body.ver || remote) && body.ver !== versions()[vk]) {
-    return send(res, 409, { error: "Bu arada başka biri de kaydetti. Değişikliğinizi kaybetmemek için sayfayı yenileyin ve tekrar yapın.", conflict: true });
-  }
+  const conflict = () => send(res, 409, { error: "Bu arada başka biri de kaydetti. Değişikliğinizi kaybetmemek için sayfayı yenileyin ve tekrar yapın.", conflict: true });
+  if (vk && (body.ver || remote) && body.ver !== versions(W)[vk]) return conflict();
   if (route === "open-folder" && remote) return send(res, 403, { error: "Klasör yalnızca bilgisayardaki panelden açılabilir" });
 
-  if (route === "gowns") {
+  if (route === "gown") {
+    // One gown saved on its own: only a change to THIS gown in the meantime counts as a conflict
+    const i = body.id ? W.GOWNS.findIndex((g) => g.id === body.id) : -1;
+    if (body.id && i < 0) return send(res, 409, { error: "Bu model bu arada silinmiş. Sayfayı yenileyin.", conflict: true });
+    if (i >= 0 && (body.base || remote) && body.base !== hash(W.GOWNS[i])) return conflict();
+    const g = cleanGown({ ...body.gown, id: i >= 0 ? W.GOWNS[i].id : "" }, W.COLLECTIONS);
+    if (i < 0) { // new gown: a free link name
+      const stem = g.id; let n = 2;
+      while (W.GOWNS.some((o) => o.id === g.id)) g.id = `${stem}-${n++}`;
+      W.GOWNS.push(g);
+    } else W.GOWNS[i] = g;
+    writeData(W);
+    const r = build();
+    return send(res, 200, { ok: true, ...r, id: g.id, ver: versions(loadSite()) });
+  } else if (route === "gown-delete") {
+    const i = W.GOWNS.findIndex((g) => g.id === body.id);
+    if (i < 0) return send(res, 404, { error: "Model bulunamadı" });
+    if ((body.base || remote) && body.base !== hash(W.GOWNS[i])) return conflict();
+    const [gone] = W.GOWNS.splice(i, 1);
+    writeTrash([{ gown: gone, date: new Date().toISOString() }, ...readTrash().filter((t) => t.gown.id !== gone.id)]);
+    writeData(W);
+  } else if (route === "restore") {
+    const t = readTrash().find((x) => x.gown.id === body.id);
+    if (!t) return send(res, 404, { error: "Silinen model bulunamadı" });
+    const g = cleanGown(t.gown, W.COLLECTIONS);
+    const stem = g.id; let n = 2;
+    while (W.GOWNS.some((o) => o.id === g.id)) g.id = `${stem}-${n++}`;
+    W.GOWNS.push(g);
+    writeTrash(readTrash().filter((x) => x.gown.id !== body.id));
+    writeData(W);
+  } else if (route === "checks") {
+    const c = readChecks();
+    if (/^[a-z]{2,20}$/.test(String(body.k))) c[body.k] = !!body.v;
+    writeAtomic(CHECKS, JSON.stringify(c, null, 1));
+    return send(res, 200, { ok: true, checks: c });
+  } else if (route === "gowns") {
     const list = (body.gowns || []).map((g) => cleanGown(g, W.COLLECTIONS));
     const ids = new Set();
     for (const g of list) { if (ids.has(g.id)) throw new Error(`Aynı bağlantı adı iki kez kullanılmış: ${g.id}`); ids.add(g.id); }
@@ -235,10 +297,10 @@ async function api(req, res, route, remote) {
     const num = (v, d, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(+v) ? +v : d));
     const next = {
       ...S,
-      whatsapp: str(c.whatsapp, 20).replace(/\D/g, "") || S.whatsapp,
-      phoneDisplay: str(c.phoneDisplay, 40), email: str(c.email, 120), instagram: str(c.instagram, 300), instagramHandle: str(c.instagramHandle, 60),
-      instagramStudio: str(c.instagramStudio, 300), etsyShop: str(c.etsyShop, 300), mapsUrl: str(c.mapsUrl, 300),
-      address: str(c.address, 300), hours: bi(c.hours, 80), showPrices: !!c.showPrices, domain: str(c.domain, 200).replace(/\/$/, ""),
+      whatsapp: normWhatsapp(c.whatsapp) || S.whatsapp,
+      phoneDisplay: str(c.phoneDisplay, 40), email: str(c.email, 120).trim(), instagram: normUrl(c.instagram), instagramHandle: str(c.instagramHandle, 60),
+      instagramStudio: normUrl(c.instagramStudio), etsyShop: normUrl(c.etsyShop), mapsUrl: normUrl(c.mapsUrl),
+      address: str(c.address, 300), hours: bi(c.hours, 80), showPrices: !!c.showPrices, domain: (normUrl(c.domain) || S.domain).replace(/\/+$/, ""),
       appointments: {
         ...S.appointments,
         calcomUser: str(A.calcomUser, 60).replace(/[^\w-]/g, ""),
@@ -282,7 +344,7 @@ async function api(req, res, route, remote) {
     return send(res, 404, { error: "Bilinmeyen işlem" });
   }
   const r = build();
-  send(res, 200, { ok: true, ...r, ver: versions() });
+  send(res, 200, { ok: true, ...r, ver: versions(loadSite()) });
 }
 
 function uploadVideo(req, res) {
@@ -345,9 +407,17 @@ const makePassword = () => {
   const abc = "abcdefghjkmnpqrstuvwxyz23456789";
   return [0, 1, 2].map(() => Array.from(crypto.randomBytes(4), (b) => abc[b % abc.length]).join("")).join("-");
 };
-const PASSWORD = REMOTE ? (process.env.ADMIN_PASSWORD || makePassword()) : "";
-const SESSION_H = 12;
-const sessions = new Map(); // token -> expiry (ms)
+// The password is kept in .yedek/admin-sifre.txt so it stays the same when the panel restarts
+// (delete that file to get a new one)
+const PW_FILE = path.join(ROOT, ".yedek", "admin-sifre.txt"), SES_FILE = path.join(ROOT, ".yedek", "oturumlar.json");
+const PASSWORD = !REMOTE ? "" : process.env.ADMIN_PASSWORD || (() => {
+  try { const p = fs.readFileSync(PW_FILE, "utf8").trim(); if (p.length >= 8) return p; } catch {}
+  const p = makePassword(); fs.mkdirSync(path.dirname(PW_FILE), { recursive: true }); fs.writeFileSync(PW_FILE, p); return p;
+})();
+const SESSION_H = 24 * 14; // two weeks: Burak shouldn't have to type the password every day
+// token -> expiry (ms); kept on disk so a restart of the panel doesn't sign Burak out mid-edit
+const sessions = new Map((() => { try { return Object.entries(JSON.parse(fs.readFileSync(SES_FILE, "utf8"))).filter(([, e]) => e > Date.now()); } catch { return []; } })());
+const saveSessions = () => { try { fs.mkdirSync(path.dirname(SES_FILE), { recursive: true }); fs.writeFileSync(SES_FILE, JSON.stringify(Object.fromEntries(sessions))); } catch {} };
 const failures = new Map(); // ip -> [timestamps]
 const cookieOf = (req) => (/(?:^|;\s*)ba_s=([a-f0-9]{48})/.exec(req.headers.cookie || "") || [])[1];
 const signedIn = (req) => { const t = cookieOf(req), exp = t && sessions.get(t); if (exp && exp > Date.now()) return true; if (t) sessions.delete(t); return false; };
@@ -356,7 +426,9 @@ const isRemoteReq = (req) => !!(req.headers["cf-connecting-ip"] || req.headers["
   !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || "");
 const clientIp = (req) => String(req.headers["cf-connecting-ip"] || req.socket.remoteAddress || "?");
 const tooMany = (ip) => (failures.get(ip) || []).filter((t) => t > Date.now() - 15 * 60e3).length >= 8;
-const samePassword = (a) => { const x = Buffer.from(String(a)), y = Buffer.from(PASSWORD); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+// "K7m2 q9xa 4fhd", "k7m2q9xa4fhd" and "k7m2-q9xa-4fhd" are all the same password
+const pwKey = (s) => String(s).toLowerCase().replace(/[\s\-–—_.]+/g, "");
+const samePassword = (a) => { const x = Buffer.from(pwKey(a)), y = Buffer.from(pwKey(PASSWORD)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 // Remote users reach only the panel, its API and the public site — never README, scripts or backups
 const remoteAllowed = (rel) => /^\/(admin(\/.*)?|api\/[\w-]+|(tr\/)?[\w-]+\.html|tr\/|assets\/[\w\-./]+|favicon\.svg|apple-touch-icon\.png|site\.webmanifest|robots\.txt|sitemap\.xml)?$/.test(rel) && !rel.includes("..");
 
@@ -374,13 +446,13 @@ function handleLogin(req, res) {
   req.on("data", (c) => { raw += c; if (raw.length > 2000) req.destroy(); });
   req.on("end", () => {
     const pw = new URLSearchParams(raw).get("sifre") || "";
-    if (!samePassword(pw.trim()) && !samePassword(pw.trim().toLowerCase())) {
+    if (!samePassword(pw)) {
       failures.set(ip, [...(failures.get(ip) || []), Date.now()]);
       return send(res, 401, loginPage("Şifre hatalı."), TYPES[".html"]);
     }
     failures.delete(ip);
     const token = crypto.randomBytes(24).toString("hex");
-    sessions.set(token, Date.now() + SESSION_H * 3600e3);
+    sessions.set(token, Date.now() + SESSION_H * 3600e3); saveSessions();
     res.writeHead(303, { Location: "/admin", "Set-Cookie": `ba_s=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${SESSION_H * 3600}`, "Cache-Control": "no-store" });
     res.end();
   });
@@ -398,7 +470,7 @@ const server = http.createServer(async (req, res) => {
       res.setHeader("X-Frame-Options", "DENY");
       res.setHeader("Referrer-Policy", "same-origin");
       if (rel === "/giris") return handleLogin(req, res);
-      if (rel === "/cikis") { sessions.delete(cookieOf(req)); res.writeHead(303, { Location: "/giris", "Set-Cookie": "ba_s=; Path=/; Max-Age=0" }); return res.end(); }
+      if (rel === "/cikis") { sessions.delete(cookieOf(req)); saveSessions(); res.writeHead(303, { Location: "/giris", "Set-Cookie": "ba_s=; Path=/; Max-Age=0" }); return res.end(); }
       if (!signedIn(req)) {
         if (rel.startsWith("/api/")) return send(res, 401, { error: "Oturum kapandı — lütfen yeniden giriş yapın", login: true });
         res.writeHead(303, { Location: "/giris" }); return res.end();
@@ -443,7 +515,9 @@ server.listen(PORT, HOST, () => {
   • Panelde yapılan her değişiklik sitenizi değiştirir — Burak'a buna göre söyleyin.
   • Siz de aynı anda kendi panelinizi kullanabilirsiniz; aynı anda kaydedilirse
     panel çakışmayı fark eder ve kimsenin işi kaybolmaz.
-  • Şifre ve link yalnızca bu pencere açıkken geçerlidir. Kapatınca erişim biter.
+  • Link yalnızca bu pencere açıkken çalışır ve her açılışta değişir (yeni linki
+    tekrar gönderin). Şifre aynı kalır; Burak bir kez girdikten sonra 2 hafta
+    tekrar sormaz. Şifreyi değiştirmek için .yedek\admin-sifre.txt dosyasını silin.
 `);
     });
   }

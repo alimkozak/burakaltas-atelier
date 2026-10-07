@@ -209,3 +209,41 @@ button { cursor: pointer; }
 .qtable__no { color: var(--mute); white-space: nowrap; }
 .qtable .in[aria-invalid="true"] { border-color: #9c3b2f; }
 .qerr { display: block; color: #9c3b2f; font-size: .78rem; margin-top: 3px; }
+
+/* ---------- Burak test round: phone layout, bigger touch targets, honest messages ---------- */
+/* Phones: the menu is one compact, sideways-scrolling strip that stays at the top */
+@media (max-width: 860px) {
+  .side { position: sticky; top: 0; z-index: 30; flex-wrap: nowrap; gap: 10px; padding: 8px 10px; overflow-x: auto; scrollbar-width: none; }
+  .side::-webkit-scrollbar { display: none; }
+  .side__logo span:not(.mono) { display: none; }
+  .side__logo .mono { font-size: 22px; }
+  .side__nav { flex-wrap: nowrap; gap: 2px; }
+  .side__nav a { padding: 9px 10px; white-space: nowrap; font-size: .9rem; }
+  .side__nav svg { display: none; }
+  .side__site { margin: 0; white-space: nowrap; font-size: .8rem; }
+  .main { padding-top: 22px; }
+  /* messages sit above the save bar, never on top of the Save button */
+  .toast { left: 12px; right: 12px; bottom: 88px; max-width: none; }
+}
+/* Warning bars (signed out, someone else saved) at the top, clear of the save bar */
+.conflict { top: 12px; bottom: auto; }
+@media (max-width: 860px) { .conflict { top: 58px; } }
+.conflict .row { display: flex; gap: 8px; }
+/* Photo buttons big enough for a thumb */
+.photo__acts button { width: 36px; height: 36px; font-size: 1rem; }
+@media (pointer: coarse) { .photo__acts button { width: 40px; height: 40px; } .icon { width: 42px; height: 42px; } .qtable input[type=checkbox] { width: 24px; height: 24px; } }
+.qtable input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); }
+/* Price fields show what was understood: "= $45,000" */
+.money__hint { display: block; min-height: 1.2em; font-size: .8rem; color: var(--ok); }
+.money__hint.is-err { color: var(--err); }
+.err-text { color: var(--err); }
+.note--warn { background: #fff4e5; color: #5c3a10; border: 1px solid #e0b46b; }
+.delzone { margin: 26px 0 0; padding-top: 18px; border-top: 1px dashed var(--line); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.delzone small { color: var(--mute); }
+.trash { margin-top: 26px; }
+.trash summary { cursor: pointer; font-weight: 500; }
+.item--trash { opacity: .85; }
+h2 .tech { font-family: var(--sans); font-size: .72rem; font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); margin-left: 8px; font-weight: 400; }
+.photo__cover { position: absolute; top: 6px; right: 6px; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: rgba(255,255,255,.92); font-size: 1rem; display: grid; place-items: center; }
+@media (pointer: coarse) { .photo__cover { width: 40px; height: 40px; } }
+@media (pointer: coarse) { .photos { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }

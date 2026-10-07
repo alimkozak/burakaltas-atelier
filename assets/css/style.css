@@ -453,7 +453,7 @@ body::after {
 .ftr__big em { color: #d8c29c; }
 .ftr__grid { display: grid; gap: 40px 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (min-width: 900px) { .ftr__grid { grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)); } }
-.ftr__grid h3 { font-size: .7rem; font-weight: 500; letter-spacing: .24em; text-transform: uppercase; opacity: .55; margin-bottom: 16px; }
+.ftr__grid h3, .ftr__h { font-family: var(--sans); font-size: .7rem; font-weight: 500; letter-spacing: .24em; text-transform: uppercase; opacity: .55; margin-bottom: 16px; }
 .ftr__list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .ftr__list a { overflow-wrap: anywhere; }
 .ftr__grid a { opacity: .88; transition: opacity .3s; }

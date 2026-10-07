@@ -308,13 +308,13 @@
             <p>${t("footerAbout")}</p>
             <a class="btn btn--ghost-light btn--sm" style="justify-self:start" href="${wa(t("waGeneral"))}" target="_blank" rel="noopener">${ICON.wa} WhatsApp</a>
           </div>
-          <div><h3>${t("collections")}</h3><ul class="ftr__list">
+          <div><h2 class="ftr__h">${t("collections")}</h2><ul class="ftr__list">
             <li><a href="collection.html?c=yakamoz">Yakamoz — Couture 2027</a></li>
             <li><a href="collection.html?c=afterparty">After Party</a></li>
             <li><a href="collection.html">${t("allGowns")}</a></li>
             <li><a href="shortlist.html">${t("shortlist")}</a></li>
           </ul></div>
-          <div><h3>${t("atelier")}</h3><ul class="ftr__list">
+          <div><h2 class="ftr__h">${t("atelier")}</h2><ul class="ftr__list">
             <li><a href="atelier.html">${t("ourStory")}</a></li>
             <li><a href="designer.html">${esc((window.DESIGNER && window.DESIGNER.name) || "Burak Altaş")}</a></li>
             <li><a href="fitting.html">${t("bookCall")}</a></li>
@@ -322,7 +322,7 @@
             <li><a href="atelier.html#remote">${t("howRemote")}</a></li>
             <li><a href="atelier.html#faq">${t("faq")}</a></li>
           </ul></div>
-          <div><h3>${t("visit")}</h3><ul class="ftr__list">
+          <div><h2 class="ftr__h">${t("visit")}</h2><ul class="ftr__list">
             <li><a href="${S.mapsUrl}" target="_blank" rel="noopener">${esc(S.address)}</a></li>
             <li><a href="tel:+${S.whatsapp}">${S.phoneDisplay}</a></li>
             <li><a href="mailto:${S.email}">${S.email}</a></li>
@@ -971,7 +971,7 @@
       const m = document.createElement("meta"); m.name = "robots"; m.content = "noindex"; document.head.append(m);
       onLang(() => {
         document.title = `${t("gownMissing")} | Burak Altaş Atelier`;
-        $("#gown").innerHTML = `<div class="wrap grid-empty" style="grid-column:1/-1;padding-block:120px"><p class="display h3">${t("gownMissing")}</p><p class="lede">${t("gownMissingSub")}</p><a class="btn" href="collection.html">${t("explore")}</a></div>`;
+        $("#gown").innerHTML = `<div class="wrap grid-empty" style="grid-column:1/-1;padding-block:120px"><h1 class="display h3">${t("gownMissing")}</h1><p class="lede">${t("gownMissingSub")}</p><a class="btn" href="collection.html">${t("explore")}</a></div>`;
         $$("main > section").forEach((sec) => (sec.hidden = true));
       });
       return;

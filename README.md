@@ -46,6 +46,8 @@ Panel kaydettiğiniz anda siteyi günceller: model sayfaları, paylaşım önizl
 Bu, test ve küçük ekip için geçici bir çözümdür. Kalıcı çözüm, sunucuda kullanıcı adı, şifre ve rollerle çalışan paneldir (2. aşama).
 
 ## Siteyi internette güncellemek
+> **Kendi sunucunuzda yayın** (Aldivent ile aynı sunucu, Caddy + Cloudflare, GitHub'a her gönderimde otomatik yayın): adımlar [`deploy/README.md`](deploy/README.md) dosyasındadır.
+
 1. Panelde **Yayınla › Yayın klasörünü hazırla**'ya basın.
 2. **"yayin" klasörünü göster** ile klasörü açın.
 3. İlk kez yayınlıyorsanız https://app.netlify.com/drop adresine gidin ve `yayin` klasörünü sayfaya sürükleyin. Site birkaç saniyede yayına girer.
@@ -65,7 +67,8 @@ Bu, test ve küçük ekip için geçici bir çözümdür. Kalıcı çözüm, sun
 | `fitting.html` | **Online prova odası:** 3 randevu türü, gelinin kendi saat diliminde gün ve saat seçimi, ölçü görüşmesi için kadın / erkek / fark etmez tercihi, hazırlık listesi, **ölçü kartı** (aşağıda) |
 | `contact.html` | 3 adımlı talep formu (WhatsApp ya da e-posta ile gönderilir) |
 | `policies.html` | Gizlilik (KVKK & GDPR), sipariş, üretim, kargo, iade & tadilat. Her sayfanın altından bağlantı verilir. |
-| `shortlist.html` | Favoriler; "Ailemle paylaş" linki ve "kendime gönder" (WhatsApp / e-posta / link). Favoriler yalnızca o tarayıcıda saklandığı için gelin linki kendine gönderip başka cihazda listeyi geri açabilir. | Favoriler **yan yana karşılaştırılabilir** (fiyat, siluet, yaka, detaylar, kumaş, üretim süresi, el işçiliği, fotoğraftaki model).
+| `shortlist.html` | Favoriler; "Ailemle paylaş" linki ve "kendime gönder" (WhatsApp / e-posta / link). Favoriler yalnızca o tarayıcıda saklandığı için gelin linki kendine gönderip başka cihazda listeyi geri açabilir. |
+ Favoriler **yan yana karşılaştırılabilir** (fiyat, siluet, yaka, detaylar, kumaş, üretim süresi, el işçiliği, fotoğraftaki model).
 
 ## Online randevu sistemi
 Site şu an **kendi talep sistemiyle** çalışıyor:

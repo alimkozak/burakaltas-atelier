@@ -30,7 +30,7 @@ const HOST = "127.0.0.1";
 const IMG_DIR = path.join(ROOT, "assets", "img", "uploads");
 const VID_DIR = path.join(ROOT, "assets", "video", "uploads");
 const MAX_BODY = 40 * 1024 * 1024;
-const MAX_VIDEO = 150 * 1024 * 1024;
+const MAX_VIDEO = 95 * 1024 * 1024; // GitHub refuses files over 100 MB
 
 const TYPES = { ".mp4": "video/mp4", ".webm": "video/webm", ".woff2": "font/woff2", ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".avif": "image/avif", ".xml": "application/xml", ".txt": "text/plain; charset=utf-8", ".webmanifest": "application/manifest+json", ".ico": "image/x-icon" };
 
@@ -287,7 +287,7 @@ function uploadVideo(req, res) {
   // An H.264 .mov from a phone plays in browsers once saved as .mp4 (same container family)
   const ext = { "video/mp4": "mp4", "video/quicktime": "mp4", "video/webm": "webm" }[type];
   if (!ext) return send(res, 400, { error: "Video MP4, MOV ya da WEBM olmalı" });
-  if (Number(req.headers["content-length"]) > MAX_VIDEO) return send(res, 413, { error: "Video çok büyük (en fazla 150 MB)" });
+  if (Number(req.headers["content-length"]) > MAX_VIDEO) return send(res, 413, { error: "Video çok büyük (en fazla 95 MB)" });
   fs.mkdirSync(VID_DIR, { recursive: true });
   const name = new URL(req.url, "http://x").searchParams.get("name");
   const base = `${slug(name)}-${Date.now().toString(36)}`;
@@ -295,7 +295,7 @@ function uploadVideo(req, res) {
   const out = fs.createWriteStream(tmp);
   let size = 0, failed = false;
   const fail = (code, msg) => { if (failed) return; failed = true; out.destroy(); fs.rm(tmp, { force: true }, () => {}); send(res, code, { error: msg }); };
-  req.on("data", (c) => { size += c.length; if (size > MAX_VIDEO) { fail(413, "Video çok büyük (en fazla 150 MB)"); req.destroy(); } });
+  req.on("data", (c) => { size += c.length; if (size > MAX_VIDEO) { fail(413, "Video çok büyük (en fazla 95 MB)"); req.destroy(); } });
   req.on("error", () => fail(400, "Yükleme yarıda kesildi"));
   out.on("error", (e) => fail(500, e.message));
   out.on("finish", () => {

@@ -1,0 +1,67 @@
+# ==========================================================================
+#  Burak Altaş Atelier — Caddy site block
+#  Import it from the server's main Caddyfile (the one Aldivent's Caddy uses):
+#      import /etc/caddy/sites/burakaltas.caddy
+#  The site is the "yayin" folder produced by `node build.js --yayin`,
+#  copied to BA_ROOT (default /srv/burakaltas/yayin).
+#  Same cache and security rules as yayin/_headers (Netlify).
+# ==========================================================================
+
+(burakaltas_site) {
+	# Use a path without spaces: Caddy inserts {$…} before it reads the file
+	root * "{$BA_ROOT:/srv/burakaltas/yayin}"
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		X-Frame-Options "SAMEORIGIN"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	# Pages are always revalidated; scripts, styles, fonts and videos carry version stamps
+	# or unique names, so they can be cached for a year
+	@pages path / /tr/ *.html
+	header @pages Cache-Control "public, max-age=0, must-revalidate"
+	@immutable path /assets/js/* /assets/css/* /assets/fonts/* /assets/video/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+	@images path /assets/img/*
+	header @images Cache-Control "public, max-age=604800"
+
+	# Types the server's MIME list may not know
+	@fonts path *.woff2
+	header @fonts Content-Type "font/woff2"
+	@manifest path *.webmanifest
+	header @manifest Content-Type "application/manifest+json"
+
+	# Netlify's header file is not part of the site itself
+	@private path /_headers
+	respond @private 404
+
+	redir /tr /tr/ 308
+	file_server
+
+	handle_errors {
+		@missing expression {err.status_code} == 404
+		handle @missing {
+			rewrite * /404.html
+			file_server
+		}
+	}
+}
+
+www.burakaltas.com {
+	import burakaltas_site
+}
+
+# Bare domain → www (one address for search engines)
+burakaltas.com {
+	redir https://www.burakaltas.com{uri} permanent
+}
+
+# The Turkish domains open the Turkish pages
+burakaltas.com.tr, www.burakaltas.com.tr {
+	redir https://www.burakaltas.com/tr{uri} permanent
+}

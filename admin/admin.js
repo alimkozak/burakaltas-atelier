@@ -212,7 +212,7 @@
         try {
           if (!file) return;
           if (!VIDEO_TYPES.includes(file.type)) throw new Error(`"${file.name}" bir video değil ya da desteklenmiyor. MP4 ya da MOV yükleyin.`);
-          if (file.size > 150 * 1048576) throw new Error(`Video çok büyük (${mb(file.size)}). 1080p ve 10–20 saniye olarak yeniden kaydedin; en fazla 150 MB.`);
+          if (file.size > 95 * 1048576) throw new Error(`Video çok büyük (${mb(file.size)}). 1080p ve 10–20 saniye olarak yeniden kaydedin; en fazla 95 MB.`);
           say("Video kontrol ediliyor…"); bar(0);
           if (await isHevc(file)) throw new Error("Bu video HEVC (H.265) formatında; Android ve Windows'taki gelinler onu göremez. iPhone'da Ayarlar › Kamera › Formatlar › “En Uyumlu” seçip yeniden çekin ya da videoyu paylaşırken “En Uyumlu” / MP4 olarak dışa aktarın.");
           url = URL.createObjectURL(file);

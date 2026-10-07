@@ -1,0 +1,52 @@
+# Builds the site on every push to main and uploads the "yayin" folder to the server.
+# Does nothing until the server is set up — then, in the repository:
+#   Settings › Secrets and variables › Actions
+#     Variables:  DEPLOY_HOST  (server address, e.g. 203.0.113.10)
+#                 DEPLOY_USER  (e.g. deploy)
+#                 DEPLOY_PATH  (e.g. /srv/burakaltas — the site goes to DEPLOY_PATH/yayin)
+#     Secret:     DEPLOY_SSH_KEY  (private key whose public half is in that user's authorized_keys)
+# Caddy serves DEPLOY_PATH/yayin (see deploy/burakaltas.caddy). Steps: deploy/README.md
+name: Build & deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ vars.DEPLOY_HOST != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build (TR + EN pages, sitemap, exchange rates, publish folder)
+        run: node build.js --yayin
+
+      - name: Upload and switch over
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER }}
+          DEST: ${{ vars.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH="ssh -i ~/.ssh/deploy_key -o BatchMode=yes"
+          # Upload next to the live folder, then swap in one step (no half-updated site)
+          rsync -az --delete -e "$SSH" yayin/ "$USER@$HOST:$DEST/yayin.new/"
+          $SSH "$USER@$HOST" "set -e; cd '$DEST'; rm -rf yayin.old; if [ -d yayin ]; then mv yayin yayin.old; fi; mv yayin.new yayin"

@@ -64,7 +64,7 @@ const HEADERS = `/*.html
 
 function build({ dist = false } = {}) {
   const W = loadSite();
-  const S = W.SITE, G = W.GOWNS || [];
+  const S = W.SITE, G = (W.GOWNS || []).filter((g) => !g.draft);
   // Uploads that also have a 480px phone version (name-xs.jpg); older uploads don't
   const upDir = path.join(root, "assets/img/uploads");
   const xs = fs.existsSync(upDir) ? fs.readdirSync(upDir).filter((f) => /-xs\.(jpg|png|webp)$/.test(f)).map((f) => `assets/img/uploads/${f.replace(/-xs(\.\w+)$/, "$1")}`) : [];
@@ -180,7 +180,7 @@ function build({ dist = false } = {}) {
 
 /* schema.org description of the atelier, from config.js + the catalogue */
 function businessLd(W, lang) {
-  const S = W.SITE, G = W.GOWNS || [];
+  const S = W.SITE, G = (W.GOWNS || []).filter((g) => !g.draft);
   const prices = G.map((g) => g.price).filter((n) => n > 0);
   const DAYS = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
   const ORDER = Object.keys(DAYS);

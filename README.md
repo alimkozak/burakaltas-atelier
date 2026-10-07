@@ -145,6 +145,21 @@ Notlar:
 - [ ] **Kişiselleştirme ücretleri:** Panel › Ayarlar. Boş bırakılan seçenekte ücret yazmaz, `0` yazılırsa "ücretsiz" yazar, sayı yazılırsa "+$120" gibi görünür ve fiyat gelin seçtikçe güncellenir.
 - [ ] **Fotoğraftaki modelin boyu ve bedeni:** Panel › Modeller › Düzenle. Yurt dışındaki gelinlerin en çok sorduğu bilgilerden biri.
 
+## Instagram'dan aktarma
+Panel › **Instagram'dan aktar**. Instagram'daki eski gönderileri birkaç tıkla taslak modele çevirir.
+
+1. **Arşivi isteyin (bir kez).** Instagram › Ayarlar › Hesaplar Merkezi › Bilgilerin ve izinlerin › Bilgilerini indir. Yalnızca **Gönderiler**, biçim **JSON**, medya kalitesi **Yüksek** seçin. Gelen zip'i bir klasöre çıkarın.
+2. **Klasörü seçin.** Panel tüm gönderileri fotoğraflarıyla gösterir; açıklamada arama yapılabilir. Daha önce aktarılanlar "aktarıldı" diye işaretlenir.
+3. **Gelinlik gönderilerini işaretleyin ve "taslak yap" deyin.** Her gönderi bir **taslak model** olur:
+   - Fotoğrafları web için küçültülür (en fazla 12).
+   - Adı açıklamanın başından çıkarılır.
+   - Açıklaması Türkçe hikâyeye yazılır.
+4. **Taslaklar sitede görünmez.** Modeller listesinde "Taslak" etiketiyle durur. Siluet, fiyat, İngilizce metin ve Etsy linkini girip **Taslak** kutusunu kaldırınca model yayına girer.
+
+Notlar:
+- **Gizlilik:** Arşiv bilgisayarınızda okunur; yalnızca seçtiğiniz fotoğraflar siteye eklenir.
+- **Videolar:** Video gönderileri bu adımda atlanır. Videoyu model düzenleme ekranından ayrıca ekleyebilirsiniz.
+
 ## Henüz dikilmemiş tasarımlar
 Daha önce üretilmemiş bir modeli de kataloğa koyabilirsiniz: Burak'ın çizimi ya da bir görselleştirme ile. Panel › Modeller › Düzenle › **"Henüz dikilmedi"** kutusunu işaretleyin.
 

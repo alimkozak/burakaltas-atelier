@@ -6,7 +6,8 @@
   "use strict";
   document.documentElement.classList.add("js");
 
-  const S = window.SITE, G = window.GOWNS, C = window.COLLECTIONS, M = window.MEDIA, R = window.REVIEWS;
+  // Drafts (imported but not reviewed yet) stay in the admin panel only
+  const S = window.SITE, G = (window.GOWNS || []).filter((g) => !g.draft), C = window.COLLECTIONS, M = window.MEDIA, R = window.REVIEWS;
   const I = window.I18N || { tr: {}, ui: {} };
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];

@@ -167,3 +167,16 @@ button { cursor: pointer; }
 @media (max-width: 760px) {
   .in, .sel, .ta, input, select, textarea { font-size: 16px; }
 }
+
+/* Instagram import */
+.steps { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.igbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+.igbar .in { flex: 1 1 220px; }
+.iggrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+.igpost { position: relative; display: grid; gap: 6px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.igpost.is-on { border-color: var(--gold-deep); box-shadow: 0 0 0 2px rgba(133, 102, 58, .25); }
+.igpost input { position: absolute; top: 14px; left: 14px; width: 20px; height: 20px; }
+.igpost img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 6px; background: var(--line); }
+.igpost__meta { font-size: .74rem; color: var(--mute); }
+.igpost__cap { font-size: .82rem; line-height: 1.4; max-height: 4.2em; overflow: hidden; }
+.note--err { color: #9c3b2f; }

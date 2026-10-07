@@ -264,7 +264,7 @@
         return `<div class="item" data-i="${i}">
           ${g.images[0] ? `<img src="${esc(src(g.images[0], 200))}" alt="" loading="lazy">` : `<div class="noimg"></div>`}
           <div>
-            <div class="item__name">${esc(g.name)} ${g.featured ? `<span class="pill pill--gold">★ öne çıkan</span>` : ""}</div>
+            <div class="item__name">${esc(g.name)} ${g.draft ? `<span class="pill pill--warn">Taslak · sitede görünmüyor</span>` : ""}${g.featured ? `<span class="pill pill--gold">★ öne çıkan</span>` : ""}</div>
             <div class="item__meta"><span>${esc(g.no)}</span><span>${esc(col ? col.name.tr || col.name.en : g.collection)}</span><span>${L.silhouette[g.silhouette] || ""}</span><span>${money(g.price)}</span>${warn.map((w) => `<span class="pill pill--warn">${w}</span>`).join("")}</div>
           </div>
           <div class="item__acts">
@@ -356,6 +356,7 @@
             <div class="grid2">
               <label class="f full"><span>Etsy ilan linki</span><input class="in" name="etsy" type="url" value="${esc(g.etsy)}" placeholder="https://www.etsy.com/listing/…"></label>
               <label class="check"><input type="checkbox" name="featured" ${g.featured ? "checked" : ""}> Ana sayfada öne çıkar ★</label>
+              <label class="check full"><input type="checkbox" name="draft" ${g.draft ? "checked" : ""}> Taslak — sitede gösterme <small style="display:block;color:var(--mute);margin-left:26px">Instagram'dan aktarılan modeller taslak olarak gelir. Bilgileri kontrol edip bu kutuyu kaldırınca model yayına girer.</small></label>
               <label class="check full"><input type="checkbox" name="concept" ${g.concept ? "checked" : ""}> Henüz dikilmedi — görseller çizim ya da görselleştirme <small style="display:block;color:var(--mute);margin-left:26px">Sitede “Tasarım · sipariş üzerine dikilir” etiketi ve açıklaması çıkar. Yapay zekâyla üretilmiş görsel kullanıyorsanız Etsy ilanında da belirtin.</small></label>
             </div>
           </section>
@@ -382,7 +383,7 @@
         price: Number(fd.get("price")) || 0, meaning: readBi(form, "meaning"), silhouette: fd.get("silhouette"), neckline: fd.get("neckline"),
         features: fd.getAll("features"), fabric: readBi(form, "fabric"), hours: Number(fd.get("hours")) || 0,
         weeks: [Number(fd.get("w0")) || 8, Number(fd.get("w1")) || Number(fd.get("w0")) || 12],
-        story: readBi(form, "story"), etsy: (fd.get("etsy") || "").trim(), featured: fd.get("featured") === "on", concept: fd.get("concept") === "on", images: g.images,
+        story: readBi(form, "story"), etsy: (fd.get("etsy") || "").trim(), featured: fd.get("featured") === "on", concept: fd.get("concept") === "on", draft: fd.get("draft") === "on", images: g.images,
         model: { height: Number(fd.get("modelH")) || 0, size: (fd.get("modelS") || "").trim() }
       };
     };
@@ -409,7 +410,7 @@
       const msg = $(".savebar .msg");
       const fail = (t, el) => { msg.textContent = t; msg.classList.add("err"); toast(t, true); el?.focus(); };
       if (!x.name) return fail("Model adı gerekli", form.elements.name);
-      if (!(x.price > 0)) return fail("Fiyat girin", form.elements.price);
+      if (!x.draft && !(x.price > 0)) return fail("Fiyat girin (taslak olarak kaydetmek için \"Taslak\" kutusunu işaretleyin)", form.elements.price);
       if (!x.images.length) return fail("En az bir fotoğraf ekleyin");
       if (isNew) {
         let idc = slug(x.name) || "model", n = 2;
@@ -664,6 +665,160 @@
 
   /* ---------- Router ---------- */
   let lastHash = location.hash;
+  /* ======================================================================
+     INSTAGRAM — posts from Instagram's own data export become draft gowns
+     (the folder is read in this browser; only the chosen photos are uploaded)
+     ====================================================================== */
+  // Instagram writes text as UTF-8 bytes in Latin-1 escapes ("Ã§" instead of "ç") — undo that
+  const fixText = (s) => {
+    s = String(s || "");
+    if (!/[À-ÿ][\u0080-¿]/.test(s)) return s;
+    try { return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(s, (c) => c.charCodeAt(0) & 255)); } catch { return s; }
+  };
+  const IG_DONE = "ba-ig-done";
+  const igDone = () => { try { return new Set(JSON.parse(localStorage.getItem(IG_DONE) || "[]")); } catch { return new Set(); } };
+  const markDone = (ids) => { try { localStorage.setItem(IG_DONE, JSON.stringify([...new Set([...igDone(), ...ids])])); } catch {} };
+  // "Yakamoz 🤍 #gelinlik #bridal" → "Yakamoz"
+  const GENERIC = /^(gelinli[kğ]\p{L}*|model\p{L}*|elbise\p{L}*|after|party|bridal|wedding|dress|gown|yeni|new)$/iu;
+  const nameFrom = (caption, date) => {
+    const line = caption.split("\n").map((l) => l.replace(/[#@][\p{L}\p{N}_.]+/gu, "").trim()).find((l) => /\p{L}/u.test(l)) || "";
+    // text before the first dash, comma, full stop or emoji; generic words dropped; at most 3 words
+    const words = line.split(/[—–|,.:;!?(]|\s-\s|\p{Extended_Pictographic}/u)
+      .map((seg) => seg.replace(/[^\p{L}\p{N}\s'’&-]/gu, " ").split(/\s+/).filter((w) => w && !GENERIC.test(w)).slice(0, 3).join(" "))
+      .find(Boolean) || "";
+    return words.slice(0, 40).trim() || `Instagram ${date ? date.toLocaleDateString("tr-TR") : ""}`.trim();
+  };
+  const storyFrom = (caption) => caption.split("\n").map((l) => l.replace(/[#@][\p{L}\p{N}_.]+/gu, "").trim()).filter(Boolean).join(" ").replace(/\s{2,}/g, " ").slice(0, 1200);
+
+  async function readExport(fileList) {
+    const files = [...fileList];
+    // paths without the top folder name, so "media/posts/…" in the JSON can be found directly
+    const byPath = new Map(files.map((f) => [f.webkitRelativePath.replace(/\\/g, "/").split("/").slice(1).join("/"), f]));
+    const find = (uri) => {
+      uri = String(uri || "").replace(/\\/g, "/").replace(/^\/+/, "");
+      if (byPath.has(uri)) return byPath.get(uri);
+      for (const [p, f] of byPath) if (p.endsWith("/" + uri) || uri.endsWith("/" + p)) return f;
+      return null;
+    };
+    const jsons = files.filter((f) => /(^|\/)posts_\d+\.json$/i.test(f.webkitRelativePath.replace(/\\/g, "/")));
+    if (!jsons.length) throw new Error("Bu klasörde Instagram gönderi dosyası (posts_1.json) bulunamadı. Arşivi zip'ten çıkarıp ana klasörü seçin; arşivi JSON biçiminde istediğinizden emin olun.");
+    const posts = [];
+    for (const j of jsons) {
+      let data; try { data = JSON.parse(await j.text()); } catch { continue; }
+      const list = Array.isArray(data) ? data : data.ig_posts || data.posts || [];
+      for (const p of list) {
+        const media = (p.media || []).filter((m) => m && m.uri);
+        const found = media.map((m) => find(m.uri)).filter(Boolean);
+        const images = found.filter((f) => /\.(jpe?g|png|webp)$/i.test(f.name));
+        if (!images.length) continue;
+        const ts = p.creation_timestamp || (media[0] && media[0].creation_timestamp) || 0;
+        posts.push({ id: `${ts}-${images[0].name}`, date: ts ? new Date(ts * 1000) : null, caption: fixText(p.title || (media[0] && media[0].title) || ""), images, videos: found.length - images.length });
+      }
+    }
+    return posts.sort((a, b) => (b.date || 0) - (a.date || 0));
+  }
+
+  function renderInstagram() {
+    view.innerHTML = `
+      <div class="head"><div><h1>Instagram'dan aktar</h1><p>Instagram arşivinizdeki gönderileri seçin; her biri fotoğraflarıyla birlikte <b>taslak model</b> olur. Taslaklar sitede görünmez — Modeller'de kontrol edip yayına alırsınız.</p></div></div>
+      <section class="card">
+        <h2>1. Arşivi isteyin <em>(bir kez)</em></h2>
+        <ol class="steps">
+          <li>Instagram › <b>Ayarlar › Hesaplar Merkezi › Bilgilerin ve izinlerin › Bilgilerini indir</b></li>
+          <li><b>Bazı bilgi türleri</b> › yalnızca <b>Gönderiler</b> · Biçim: <b>JSON</b> · Medya kalitesi: <b>Yüksek</b></li>
+          <li>Instagram birkaç saat içinde e-postayla indirme linki gönderir. Zip dosyasını indirip bir klasöre çıkarın.</li>
+        </ol>
+      </section>
+      <section class="card">
+        <h2>2. Klasörü seçin</h2>
+        <label class="drop" tabindex="0">
+          <input type="file" id="igdir" webkitdirectory multiple hidden>
+          <b>Instagram arşiv klasörünü seçin</b>
+          <small>Zip'ten çıkarılmış ana klasör · dosyalar bu bilgisayarda okunur, yalnızca seçtiğiniz fotoğraflar yüklenir</small>
+        </label>
+        <div id="igres"></div>
+      </section>`;
+    const input = $("#igdir"), drop = $(".drop", view), res = $("#igres");
+    drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+    input.addEventListener("change", async () => {
+      if (!input.files.length) return;
+      res.innerHTML = `<p class="note">Arşiv okunuyor…</p>`;
+      try { showPosts(await readExport(input.files)); }
+      catch (e) { res.innerHTML = `<p class="note note--err">${esc(e.message)}</p>`; }
+    });
+
+    function showPosts(posts) {
+      const done = igDone(), picked = new Set();
+      const urls = [];
+      res.innerHTML = `
+        <div class="igbar">
+          <input class="in" type="search" id="igq" placeholder="Açıklamada ara (ör. prenses, dantel)">
+          <label class="f" style="margin:0"><select class="sel" id="igcol">${DB.collections.map((c) => `<option value="${c.id}">${esc(c.name.tr || c.name.en)}</option>`).join("")}</select></label>
+          <button type="button" class="btn btn--ok" id="iggo" disabled>Seçilenleri taslak yap</button>
+        </div>
+        <p class="hint" id="igcount"></p>
+        <div class="iggrid" id="iggrid"></div>`;
+      const grid = $("#iggrid"), go = $("#iggo");
+      const draw = () => {
+        urls.splice(0).forEach(URL.revokeObjectURL);
+        const q = $("#igq").value.trim().toLocaleLowerCase("tr");
+        const shown = posts.filter((p) => !q || p.caption.toLocaleLowerCase("tr").includes(q));
+        $("#igcount").textContent = `${posts.length} gönderi · ${shown.length} gösteriliyor · ${picked.size} seçili`;
+        grid.innerHTML = shown.map((p) => {
+          const u = URL.createObjectURL(p.images[0]); urls.push(u);
+          return `<label class="igpost ${picked.has(p.id) ? "is-on" : ""}">
+            <input type="checkbox" data-ig="${esc(p.id)}" ${picked.has(p.id) ? "checked" : ""}>
+            <img src="${u}" alt="" loading="lazy">
+            <span class="igpost__meta">${p.date ? p.date.toLocaleDateString("tr-TR") : ""} · ${p.images.length} foto${p.videos ? ` · ${p.videos} video atlandı` : ""}${done.has(p.id) ? ` · <b>aktarıldı</b>` : ""}</span>
+            <span class="igpost__cap">${esc(p.caption.slice(0, 140)) || "<i>açıklama yok</i>"}</span>
+          </label>`;
+        }).join("") || `<p class="note">Eşleşen gönderi yok.</p>`;
+        go.disabled = !picked.size;
+        go.textContent = picked.size ? `${picked.size} gönderiyi taslak yap` : "Seçilenleri taslak yap";
+      };
+      $("#igq").addEventListener("input", draw);
+      grid.addEventListener("change", (e) => {
+        const c = e.target.closest("[data-ig]"); if (!c) return;
+        c.checked ? picked.add(c.dataset.ig) : picked.delete(c.dataset.ig);
+        c.closest(".igpost").classList.toggle("is-on", c.checked);
+        $("#igcount").textContent = `${posts.length} gönderi · ${picked.size} seçili`;
+        go.disabled = !picked.size; go.textContent = picked.size ? `${picked.size} gönderiyi taslak yap` : "Seçilenleri taslak yap";
+      });
+      go.addEventListener("click", async () => {
+        const chosen = posts.filter((p) => picked.has(p.id)), collection = $("#igcol").value;
+        const total = chosen.reduce((n, p) => n + Math.min(p.images.length, 12), 0);
+        if (!confirm(`${chosen.length} gönderi taslak model olacak (${total} fotoğraf yüklenecek). Devam edilsin mi?`)) return;
+        go.disabled = true;
+        const drafts = [], ids = new Set(DB.gowns.map((g) => g.id));
+        const prefix = collection === "afterparty" ? "AP-2" : "BA-1";
+        let n = +nextCode(collection).slice(prefix.length), k = 0;
+        try {
+          for (const p of chosen) {
+            const name = nameFrom(p.caption, p.date);
+            const images = [];
+            for (const f of p.images.slice(0, 12)) {
+              go.textContent = `Yükleniyor ${++k} / ${total}…`;
+              try { images.push(await processAndUpload(f, name)); } catch (e) { toast(`${f.name}: ${e.message}`, true); }
+            }
+            if (!images.length) continue;
+            let id = slug(name) || "model", i = 2;
+            while (ids.has(id)) id = `${slug(name) || "model"}-${i++}`;
+            ids.add(id);
+            drafts.push({ id, no: prefix + String(n++).padStart(2, "0"), name, collection, meaning: {}, silhouette: collection === "afterparty" ? "mini" : "aline", neckline: "strapless",
+              features: [], fabric: {}, hours: 0, price: 0, weeks: [8, 12], etsy: "", images, story: { tr: storyFrom(p.caption), en: "" }, draft: true });
+          }
+          if (!drafts.length) throw new Error("Hiç fotoğraf yüklenemedi");
+          await post("gowns", { gowns: [...DB.gowns, ...drafts] });
+          markDone(chosen.map((p) => p.id));
+          await reload();
+          toast(`${drafts.length} taslak model oluştu — Modeller'de kontrol edip yayına alın`);
+          location.hash = "#modeller";
+        } catch (e) { toast(e.message, true); go.disabled = false; go.textContent = `${picked.size} gönderiyi taslak yap`; }
+      });
+      draw();
+    }
+  }
+
   async function route() {
     if (dirty && !confirm("Kaydedilmemiş değişiklikler var. Sayfadan çıkılsın mı?")) { history.replaceState(null, "", lastHash); return; }
     dirty = false; lastHash = location.hash;
@@ -677,6 +832,7 @@
     else if (h === "tasarimci") renderDesigner();
     else if (h === "yorumlar") renderReviews();
     else if (h === "ayarlar") renderSettings();
+    else if (h === "instagram") renderInstagram();
     else if (h === "yayinla") renderPublish();
     else renderList();
     view.focus({ preventScroll: true }); scrollTo(0, 0);

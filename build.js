@@ -133,7 +133,18 @@ function build({ dist = false } = {}) {
   ${g.video ? `<meta property="og:video" content="${esc(`${S.domain}/${g.video.src}`)}">
   <meta property="og:video:type" content="${vtype}">
   ` : ""}<meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`;
+  <script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>
+  <script type="application/ld+json">${JSON.stringify(crumbs(g, lang, url)).replace(/</g, "\\u003c")}</script>`;
+  };
+  // Home › collection › gown, shown by Google under the result title
+  const crumbs = (g, lang, url) => {
+    const tr = lang === "tr", base = `${S.domain}/${tr ? "tr/" : ""}`;
+    const col = (W.COLLECTIONS || []).find((c) => c.id === g.collection);
+    return { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+      { "@type": "ListItem", position: 1, name: tr ? "Ana sayfa" : "Home", item: base },
+      ...(col ? [{ "@type": "ListItem", position: 2, name: L2(col.name, lang), item: `${base}collection.html?c=${col.id}` }] : []),
+      { "@type": "ListItem", position: col ? 3 : 2, name: g.name, item: url }
+    ] };
   };
   const gownHtml = (g, lang) => template
     .replace(/<title>[\s\S]*?<\/title>\s*<meta name="description"[^>]*>/, gownHead(g, lang))
@@ -167,6 +178,34 @@ function build({ dist = false } = {}) {
   return { gowns: G.length, dist: dist ? DIST : null };
 }
 
+/* schema.org description of the atelier, from config.js + the catalogue */
+function businessLd(W, lang) {
+  const S = W.SITE, G = W.GOWNS || [];
+  const prices = G.map((g) => g.price).filter((n) => n > 0);
+  const DAYS = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+  const ORDER = Object.keys(DAYS);
+  // "Mon–Sat · 10:00–19:00" → opening hours; anything else is simply left out
+  const h = /^(mon|tue|wed|thu|fri|sat|sun)\w*\s*[–-]\s*(mon|tue|wed|thu|fri|sat|sun)\w*\D+(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/i.exec((S.hours && S.hours.en) || "");
+  const hours = h ? [{ "@type": "OpeningHoursSpecification", dayOfWeek: ORDER.slice(ORDER.indexOf(h[1].toLowerCase()), ORDER.indexOf(h[2].toLowerCase()) + 1).map((d) => DAYS[d]), opens: h[3].padStart(5, "0"), closes: h[4].padStart(5, "0") }] : [];
+  const addr = /^(.*?),\s*(\d{5})\s+([^/,]+?)\s*\/\s*([^,]+?)(?:,\s*(.+))?$/.exec(S.address || "");
+  const firstImg = (G.find((g) => g.featured) || G[0] || {}).images?.[0];
+  return {
+    "@context": "https://schema.org", "@type": "ClothingStore", "@id": `${S.domain}/#atelier`,
+    name: S.brand, url: lang === "tr" ? `${S.domain}/tr/` : `${S.domain}/`,
+    description: lang === "tr" ? "İzmir'de el yapımı, ölçüye özel couture gelinlikler ve after party elbiseleri; görüntülü görüşmeyle ölçü, dünyaya gönderim."
+      : "Couture wedding dresses and after-party dresses hand-made to measure in İzmir, fitted over video and shipped worldwide.",
+    logo: `${S.domain}/assets/img/icon-512.png`,
+    ...(firstImg ? { image: /^assets\//.test(firstImg) ? `${S.domain}/${firstImg}` : /^https?:/.test(firstImg) ? firstImg : `https://images.unsplash.com/photo-${firstImg}?auto=format&fit=crop&w=1200&q=75` } : {}),
+    telephone: `+${S.whatsapp}`,
+    ...(addr ? { address: { "@type": "PostalAddress", streetAddress: addr[1], postalCode: addr[2], addressLocality: addr[3].trim(), addressRegion: addr[4].trim(), addressCountry: "TR" } } : {}),
+    ...(S.mapsUrl ? { hasMap: S.mapsUrl } : {}),
+    ...(hours.length ? { openingHoursSpecification: hours } : {}),
+    ...(prices.length ? { priceRange: `$${Math.min(...prices).toLocaleString("en-US")}–$${Math.max(...prices).toLocaleString("en-US")}` } : {}),
+    currenciesAccepted: S.currency, areaServed: "Worldwide", inLanguage: ["en", "tr"],
+    sameAs: [S.instagram, S.instagramStudio].filter((u) => /^https:\/\//.test(u || ""))
+  };
+}
+
 function makeDist() {
   fs.rmSync(DIST, { recursive: true, force: true });
   fs.mkdirSync(DIST);
@@ -189,6 +228,14 @@ function makeDist() {
   for (const f of fs.readdirSync(DIST).filter((f) => f.endsWith(".html") && !/^gown-/.test(f) && f !== "404.html")) {
     const file = path.join(DIST, f);
     fs.writeFileSync(file, withLangLinks(fs.readFileSync(file, "utf8"), S.domain, f, "en"));
+  }
+  // The shop itself for Google (local search, Maps): built from the settings, so it never goes stale
+  const W = loadSite();
+  for (const [file, lang] of [["index.html", "en"], ["tr/index.html", "tr"]]) {
+    const p = path.join(DIST, file);
+    if (!fs.existsSync(p)) continue;
+    const ld = JSON.stringify(businessLd(W, lang)).replace(/</g, "\\u003c");
+    fs.writeFileSync(p, fs.readFileSync(p, "utf8").replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, `<script type="application/ld+json">${ld}</script>`));
   }
   stampAssets(DIST);
   if (fs.existsSync(path.join(DIST, "tr"))) stampAssets(path.join(DIST, "tr"));

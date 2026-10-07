@@ -22,7 +22,8 @@
   /* ---------- Language ---------- */
   const LANGS = ["en", "tr"];
   // Turkish pages live in /tr/ as real HTML (build.js); the page's own language always wins there
-  const FIXED = document.documentElement.dataset.lang;
+  // (data-page-lang, not data-lang: the language buttons use [data-lang] and clicks look for it)
+  const FIXED = document.documentElement.dataset.pageLang;
   const BASE = document.documentElement.dataset.base || "";
   const pageFile = () => decodeURIComponent(location.pathname.split("/").pop() || "index.html");
   const twinOf = (l) => {

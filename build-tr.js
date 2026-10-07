@@ -124,7 +124,7 @@ function withLangLinks(html, domain, file, lang) {
 /* The Turkish twin of an English page (file = its name, e.g. "fitting.html") */
 function toTurkish(html, { file, TR, pages, domain, meta = META[file] || {} }) {
   html = applyTranslations(html, TR);
-  html = html.replace(/<html lang="en"[^>]*>/, '<html lang="tr" data-lang="tr" data-base="../">');
+  html = html.replace(/<html lang="en"[^>]*>/, '<html lang="tr" data-page-lang="tr" data-base="../">');
   for (const [kind, value] of Object.entries(meta)) html = setMeta(html, kind, value);
   html = html.replace(/<meta property="og:locale" content="[^"]*">/, "");
   html = html.replace(/(<meta property="og:[a-z]+")/, '<meta property="og:locale" content="tr_TR">\n  $1');

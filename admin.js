@@ -10,7 +10,15 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
-const { build, loadSite, refreshRates } = require("./build.js");
+// build.js (and build-tr.js) are re-read on every use, so a panel left open for days still
+// publishes with the latest site code after an update from Git
+const fresh = () => {
+  for (const m of ["./build.js", "./build-tr.js"]) delete require.cache[require.resolve(m)];
+  return require("./build.js");
+};
+const build = (...a) => fresh().build(...a);
+const loadSite = (...a) => fresh().loadSite(...a);
+const refreshRates = (...a) => fresh().refreshRates(...a);
 
 const crypto = require("crypto");
 const ROOT = __dirname;

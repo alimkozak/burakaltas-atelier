@@ -661,8 +661,9 @@
         </section>
         <section class="card"><h2>Kişiselleştirme ücretleri (USD)</h2><p class="hint">Model sayfasındaki "Size özel olsun" seçeneklerinin yanında görünür ve seçildikçe fiyat güncellenir. <b>Boş bırakın</b> = ücret gösterilmez · <b>0</b> = "ücretsiz" yazar · <b>sayı</b> = "+$120" gibi gösterilir.</p>
           <div class="grid2">
-            ${[["colour", "Renk değişikliği (fildişi dışında)"], ["sleevesLong", "Uzun kol ekleme"], ["sleevesDetachable", "Takılıp çıkarılabilir kol"], ["trainShorter", "Daha kısa kuyruk"], ["trainCathedral", "Katedral boy kuyruk"]].map(([k, label]) => `<label class="f"><span>${label}</span><input class="in" name="ex_${k}" type="number" min="0" step="10" value="${(S.extras || {})[k] ?? ""}" placeholder="boş = gösterme"></label>`).join("")}
+            ${[["colour", "Renk değişikliği (fildişi dışında)"], ["sleevesLong", "Uzun kol ekleme"], ["sleevesDetachable", "Takılıp çıkarılabilir kol"], ["trainShorter", "Daha kısa kuyruk"], ["trainCathedral", "Katedral boy kuyruk"], ["neckHigher", "Daha kapalı yaka"], ["neckIllusion", "Tül (illüzyon) yaka"]].map(([k, label]) => `<label class="f"><span>${label}</span><input class="in" name="ex_${k}" type="number" min="0" step="10" value="${(S.extras || {})[k] ?? ""}" placeholder="boş = gösterme"></label>`).join("")}
           </div>
+          <label class="f" style="margin-top:14px"><span>Kargo ücreti (USD)</span><input class="in" name="shipping" type="number" min="0" step="5" value="${Number.isFinite(S.shipping) ? S.shipping : ""}" placeholder="boş = teklifte netleşir"><small>Model sayfasında “Takipli, sigortalı kargo: $X” yazar. Boş bırakılırsa “kargo teklifte netleşir” yazar; 0 = ücretsiz.</small></label>
         </section>
         <section class="card"><h2>Canlı sohbet</h2><p class="hint">Ücretsiz Tawk.to hesabı açın (README'de adımlar). Sonra tawk.to › Administration › Chat Widget bölümündeki embed kodunda geçen adresi (https://embed.tawk.to/…) olduğu gibi aşağıya yapıştırın. Boş bırakırsanız sitede yalnızca WhatsApp butonu görünür. Mesajlara Tawk.to'nun telefon uygulamasından cevap verirsiniz.</p>
           <div class="grid2">
@@ -694,7 +695,8 @@
       site.hours = readBi(form, "hours"); site.showPrices = fd.get("showPrices") === "on";
       site.appointments = { start: +fd.get("start"), end: +fd.get("end"), days: fd.getAll("days").map(Number), calcomUser: (fd.get("calcomUser") || "").trim() };
       site.analytics = { cloudflareToken: (fd.get("cfToken") || "").trim() };
-      site.extras = Object.fromEntries(["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral"].map((k) => [k, fd.get(`ex_${k}`)]));
+      site.extras = Object.fromEntries(["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral", "neckHigher", "neckIllusion"].map((k) => [k, fd.get(`ex_${k}`)]));
+      site.shipping = fd.get("shipping");
       site.chat = { tawkPropertyId: (fd.get("tawkPropertyId") || "").trim(), tawkWidgetTr: (fd.get("tawkWidgetTr") || "").trim() };
       if (site.appointments.end <= site.appointments.start) { toast("Bitiş saati başlangıçtan sonra olmalı", true); return; }
       try { await post("config", { site }); dirty = false; await reload(); toast("Ayarlar kaydedildi"); renderSettings(); }
@@ -736,12 +738,17 @@
         { k: "policies", t: "Gizlilik & koşullar sayfası Burak ile okundu", d: "İade/tadilat, verilerin saklanma süresi, üretim ve kargo süreleri" },
         { k: "measure", t: "Ölçü kartı ifadeleri teyit edildi", d: "Bolluk payı, topuk yüksekliği, \"2 kg / 2 cm değişirse yeniden ölçün\"" },
         { k: "numbers", t: "Ana sayfadaki rakamlar teyit edildi", d: "Örn. işçilik saatleri ve inci sayıları" },
-        { k: "consent", t: "Gerçek gelin fotoğrafları için izin alındı", d: "Site ve Instagram için yazılı onay (KVKK)" }
+        { k: "consent", t: "Gerçek gelin fotoğrafları için izin alındı", d: "Site ve Instagram için yazılı onay (KVKK)" },
+        { k: "payment", t: "Ödeme, iptal ve iade kargosu yazıldı", d: "Etsy'de ödemenin tamamı mı alınıyor, kesimden önce iptal olursa ne olur, atölye hatasında geri gönderim kargosunu kim öder — gelinler en çok bunu sordu (Gizlilik & koşullar sayfası)" },
+        { k: "callfees", t: "Ölçü ve prova görüşmelerinin ücreti netleşti", d: "\"Siparişe dahil\" mi? Şu an yalnızca tasarım görüşmesi \"ücretsiz\" yazıyor" },
+        { k: "privacy", t: "Fotoğraf ve görüşme gizliliği yazıldı", d: "Vücut fotoğraflarını kim görüyor, görüntülü görüşmeler kaydediliyor mu, fotoğraflar asla paylaşılmaz mı" },
+        { k: "staff", t: "Kadın personel bilgisi netleşti", d: "Ölçüyü bir kadının alması seçilebiliyor — tasarım görüşmesinde de kadın personel olabilir mi" }
       ]],
       ["İsteğe bağlı", [
         { st: S.chat && S.chat.tawkPropertyId ? "ok" : "opt", t: "Canlı sohbet (Tawk.to)", d: S.chat && S.chat.tawkPropertyId ? "Açık" : "Kapalı — gelinler yalnızca WhatsApp'tan yazabilir", go: "#ayarlar" },
         { st: S.analytics && S.analytics.cloudflareToken ? "ok" : "opt", t: "Ziyaretçi istatistikleri", d: S.analytics && S.analytics.cloudflareToken ? "Açık" : "Kapalı — kaç kişinin geldiğini göremezsiniz", go: "#ayarlar" },
         { st: S.appointments && S.appointments.calcomUser ? "ok" : "opt", t: "Otomatik takvim (Cal.com)", d: S.appointments && S.appointments.calcomUser ? "Açık" : "Kapalı — randevu talepleri WhatsApp'a düşüyor", go: "#ayarlar" },
+        { st: Number.isFinite(S.shipping) ? "ok" : "opt", t: "Kargo ücreti", d: Number.isFinite(S.shipping) ? `$${S.shipping}` : "Girilmemiş — model sayfasında \"teklifte netleşir\" yazıyor", go: "#ayarlar" },
         { st: S.extras && Object.values(S.extras).some((v) => v !== null) ? "ok" : "opt", t: "Kişiselleştirme ücretleri", d: S.extras && Object.values(S.extras).some((v) => v !== null) ? "Girilmiş" : "Girilmemiş — seçeneklerde ücret yazmıyor", go: "#ayarlar" }
       ]]
     ].map(([title, items]) => [title, items.map((x) => (x.k ? { ...x, st: m[x.k] ? "ok" : "todo" } : x))]);

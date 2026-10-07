@@ -45,6 +45,7 @@ const META = {
   }
 };
 
+const DEFAULT_OG = "https://images.unsplash.com/photo-1622277430358-f4d134452e2e?auto=format&fit=crop&w=1200&h=630&q=75";
 const escAttr = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
 // Index just after the element that opens at `start` (handles nested tags of the same name)
@@ -112,18 +113,41 @@ function langLinks(domain, file, lang) {
   const p = file === "index.html" ? "" : file;
   const en = `${domain}/${p}`, tr = `${domain}/tr/${p}`;
   return `<link rel="canonical" href="${lang === "tr" ? tr : en}">
+  <meta property="og:url" content="${lang === "tr" ? tr : en}">
   <link rel="alternate" hreflang="en" href="${en}">
   <link rel="alternate" hreflang="tr" href="${tr}">
   <link rel="alternate" hreflang="x-default" href="${en}">`;
 }
 function withLangLinks(html, domain, file, lang) {
-  html = html.replace(/\s*<link rel="canonical"[^>]*>/, "").replace(/\s*<link rel="alternate" hreflang="[^"]*"[^>]*>/g, "");
+  html = html.replace(/\s*<link rel="canonical"[^>]*>/, "").replace(/\s*<link rel="alternate" hreflang="[^"]*"[^>]*>/g, "").replace(/\s*<meta property="og:url"[^>]*>/, "");
+  // a page without a preview image borrows the home page's
+  if (!/property="og:image"/.test(html)) html = html.replace(/(<meta name="description"[^>]*>)/, `$1\n  <meta property="og:image" content="${DEFAULT_OG}">`);
   return html.replace(/(<meta name="description"[^>]*>)/, `$1\n  ${langLinks(domain, file, lang)}`);
 }
+
+// Turkish descriptions of the photos written straight into the pages (screen readers, image search)
+const ALT = {
+  "A bride being fitted in her gown": "Gelinliğinin provasını yapan bir gelin",
+  "A cluster of pearls": "Bir avuç inci",
+  "A finished gown hanging in the atelier window": "Atölye penceresinde asılı, tamamlanmış bir gelinlik",
+  "A gown being fitted on a bride in the atelier": "Atölyede bir gelinin üzerinde provası yapılan gelinlik",
+  "Back of the Sedef lace mermaid gown": "Sedef dantel balık gelinliğin sırt detayı",
+  "Bride in the Yakamoz ball gown standing at a tall window": "Yakamoz prenses gelinliğiyle yüksek bir pencerenin önünde duran gelin",
+  "Bride looking through a sheer veil": "Tül duvağın arkasından bakan gelin",
+  "Close-up of hand-sewn beading on bridal tulle": "Gelinlik tülü üzerinde elde dikilmiş boncuk işlemesi",
+  "Draped ivory silk": "Dökümlü fildişi ipek",
+  "Hands stitching ivory fabric with needle and thread": "Fildişi kumaşı iğne iplikle diken eller",
+  "Intricate white lace": "İnce işçilikli beyaz dantel",
+  "Seamstress adjusting a gown at the atelier": "Atölyede gelinliği düzelten terzi",
+  "Seamstress adjusting a gown during a fitting": "Prova sırasında gelinliği düzelten terzi",
+  "Soft white feathers": "Yumuşak beyaz tüyler",
+  "The Kuğu feather gown in motion": "Hareket halindeki Kuğu tüylü gelinlik"
+};
 
 /* The Turkish twin of an English page (file = its name, e.g. "fitting.html") */
 function toTurkish(html, { file, TR, pages, domain, meta = META[file] || {} }) {
   html = applyTranslations(html, TR);
+  html = html.replace(/(<img\b[^>]*\balt=")([^"]*)(")/g, (m, a, alt, b) => a + (ALT[alt] ? escAttr(ALT[alt]) : alt) + b);
   html = html.replace(/<html lang="en"[^>]*>/, '<html lang="tr" data-page-lang="tr" data-base="../">');
   for (const [kind, value] of Object.entries(meta)) html = setMeta(html, kind, value);
   html = html.replace(/<meta property="og:locale" content="[^"]*">/, "");

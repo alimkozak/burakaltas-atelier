@@ -30,15 +30,16 @@
   const pageFile = () => decodeURIComponent(location.pathname.split("/").pop() || "index.html");
   const twinOf = (l) => {
     const built = window.BUILT_TR || [];
-    if (!built.includes(pageFile())) return null;
+    // only pages that exist in both languages, and only at the site root (a 404 at /old/x.html must not loop)
+    if (!built.includes(pageFile()) || page === "404" || !/^\/(tr\/)?[^/]*$/.test(location.pathname)) return null;
     const u = new URL(location.href);
     u.searchParams.delete("lang");
     u.pathname = u.pathname.replace(/\/(?:tr\/)?[^/]*$/, l === "tr" ? `/tr/${pageFile()}` : `/${pageFile()}`);
     return u.href;
   };
   let lang = FIXED || params.get("lang");
-  if (LANGS.includes(lang)) store.set("ba-lang", lang);
-  else lang = store.get("ba-lang", null);
+  if (!FIXED && LANGS.includes(lang)) store.set("ba-lang", lang);
+  else if (!FIXED) lang = store.get("ba-lang", null);
   if (!LANGS.includes(lang)) lang = (navigator.language || "en").toLowerCase().startsWith("tr") ? "tr" : "en";
   // An English address opened by a Turkish reader (or an old ?lang=tr link): go to the Turkish page
   if (!FIXED && lang === "tr") { const tw = twinOf("tr"); if (tw) { location.replace(tw); return; } }
@@ -118,14 +119,20 @@
     if (/^America\/(Toronto|Vancouver|Edmonton|Winnipeg|Halifax|Regina|St_Johns|Montreal|Moncton|Whitehorse|Yellowknife|Iqaluit)$/.test(tz)) return "CAD";
     return null;
   };
-  const fxHint = (usd) => {
+  const fxText = (usd) => {
     const cur = localCurrency();
     if (!cur || cur === S.currency) return "";
     const rate = PEGS[cur] || (window.FX && window.FX.rates && window.FX.rates[cur]);
     if (!rate) return "";
     const v = usd * rate, step = v >= 10000 ? 100 : 10;
-    const txt = new Intl.NumberFormat(lang === "tr" ? "tr-TR" : "en-GB", { style: "currency", currency: cur, currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 }).format(Math.round(v / step) * step);
-    return ` <span class="gown__fx" title="${esc(t("fxNote", { date: (window.FX && window.FX.date) || "" }))}">≈ ${txt}</span>`;
+    return new Intl.NumberFormat(lang === "tr" ? "tr-TR" : "en-GB", { style: "currency", currency: cur, currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 }).format(Math.round(v / step) * step);
+  };
+  const fxHint = (usd) => {
+    const txt = fxText(usd);
+    if (!txt) return "";
+    const cur = localCurrency();
+    const note = PEGS[cur] ? t("fxPeg", { cur }) : t("fxNote", { date: (window.FX && window.FX.date) || "" });
+    return ` <span class="gown__fx" title="${esc(note)}">≈ ${txt}</span>`;
   };
   const money =(n) => new Intl.NumberFormat(lang === "tr" ? "tr-TR" : "en-US", { style: "currency", currency: S.currency || "USD", maximumFractionDigits: 0 }).format(n);
   const fmtDate = (d) => d.toLocaleDateString(lang === "tr" ? "tr-TR" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -137,6 +144,8 @@
   const etsyFor = (g) => (g && g.etsy) || S.etsyShop;
   const byId = (id) => G.find((g) => g.id === id);
   const kind = (g) => t(g.collection === "afterparty" ? "apDress" : "weddingDress");
+  const sameWord = (a, b) => String(a || "").toLocaleLowerCase("tr") === String(b || "").toLocaleLowerCase("tr");
+  const meaningOf = (g) => (lang === "tr" && sameWord(g.name, g.meaning && g.meaning.tr) ? "" : L(g.meaning));
   const gownAlt = (g, i) => `${g.name} — ${L(LABELS.silhouette[g.silhouette])} ${kind(g)}${i ? ` (${i + 1})` : ""}, Burak Altaş Atelier`;
 
   const LABELS = {
@@ -207,7 +216,7 @@
     $$("[data-heart]").forEach((b) => {
       const on = shortlist.has(b.dataset.heart);
       b.setAttribute("aria-pressed", String(on));
-      b.setAttribute("aria-label", t("addShortlist"));
+      b.setAttribute("aria-label", t(on ? "removeShortlist" : "addShortlist"));
     });
   }
   document.addEventListener("click", (e) => {
@@ -244,7 +253,9 @@
   }
 
   /* ---------- Header / menu / footer ---------- */
-  const NAV = [
+  const D0 = window.DESIGNER || {};
+  const designerReady = !!(D0.photo || (D0.bio && (D0.bio.tr || D0.bio.en)));
+  const NAV_ALL = [
     { href: "collection.html?c=yakamoz", key: "nav.bridal", en: "Bridal", tr: "Gelinlik", p: "collection" },
     { href: "collection.html?c=afterparty", key: "nav.after", en: "After Party", tr: "After Party", p: "collection-ap" },
     { href: "atelier.html", key: "nav.atelier", en: "Atelier", tr: "Atölye", p: "atelier" },
@@ -252,6 +263,7 @@
     { href: "fitting.html", key: "nav.fitting", en: "Online fitting", tr: "Online prova", p: "fitting" },
     { href: "contact.html", key: "nav.contact", en: "Contact", tr: "İletişim", p: "contact" }
   ];
+  const NAV = NAV_ALL.filter((n) => n.p !== "designer" || designerReady);
   function renderChrome() {
     const hdr = $("[data-header]");
     if (hdr) {
@@ -316,7 +328,7 @@
           </ul></div>
           <div><h2 class="ftr__h">${t("atelier")}</h2><ul class="ftr__list">
             <li><a href="atelier.html">${t("ourStory")}</a></li>
-            <li><a href="designer.html">${esc((window.DESIGNER && window.DESIGNER.name) || "Burak Altaş")}</a></li>
+            ${designerReady ? `<li><a href="designer.html">${esc((window.DESIGNER && window.DESIGNER.name) || "Burak Altaş")}</a></li>` : ""}
             <li><a href="fitting.html">${t("bookCall")}</a></li>
             <li><a href="fitting.html#measure-card">${t("measureGuide")}</a></li>
             <li><a href="atelier.html#remote">${t("howRemote")}</a></li>
@@ -599,7 +611,7 @@
   }
   function card(g, { sizes = RAIL_SIZES, cls = "" } = {}) {
     const second = g.images[1] || g.images[0];
-    const price = S.showPrices && g.price ? `<p class="card__price">${t("from")} <b>${money(g.price)}</b></p>` : "";
+    const price = S.showPrices && g.price ? `<p class="card__price">${t("from")} <b>${money(g.price)}</b>${fxHint(g.price)}</p>` : "";
     return `
     <article class="card reveal ${cls}" data-cursor="view" data-vt="${g.id}">
       <div class="card__media"${g.video ? ` data-preview="${esc(at(g.video.src))}"` : ""}>
@@ -612,7 +624,7 @@
       <div class="card__body">
         <h3 class="card__name"><a href="${gownUrl(g)}">${esc(g.name)}</a></h3>
         <button class="heart" type="button" data-heart="${g.id}" aria-pressed="false" aria-label="${t("addShortlist")}">${ICON.heart}</button>
-        <p class="card__meaning">${esc(L(g.meaning))}</p>
+        <p class="card__meaning">${esc(meaningOf(g))}</p>
         ${price}
       </div>
     </article>`;
@@ -664,7 +676,7 @@
       { v: "faith", t: { en: "Church, mosque or temple", tr: "Kilise, cami ya da mabet" }, d: { en: "Elegant and more covered", tr: "Zarif ve daha kapalı" }, w: { s: { aline: 1, ballgown: 1 }, f: { sleeves: 4, lace: 1 }, n: { highneck: 3 } } }
     ] },
     { key: "shape", q: { en: "Which shape feels like you?", tr: "Hangi siluet sizi yansıtıyor?" }, opts: [
-      { v: "princess", t: { en: "Princess", tr: "Prenses" }, d: { en: "Full skirt, fitted corset", tr: "Kabarık etek, oturan korse" }, w: { s: { ballgown: 4 } } },
+      { v: "princess", t: { en: "Princess", tr: "Prenses" }, d: { en: "Full skirt, fitted corset", tr: "Kabarık etek, oturan korse" }, w: { s: { ballgown: 8 }, f: { corset: 1, train: 1 } } },
       { v: "romantic", t: { en: "Romantic & flowing", tr: "Romantik ve akışkan" }, d: { en: "A soft A-line", tr: "Yumuşak A kesim" }, w: { s: { aline: 4 } } },
       { v: "sculpted", t: { en: "Sculpted", tr: "Heykel gibi" }, d: { en: "Hugs every curve", tr: "Vücudu saran balık" }, w: { s: { mermaid: 4 } } },
       { v: "minimal", t: { en: "Minimal", tr: "Minimal" }, d: { en: "Straight, clean lines", tr: "Düz, temiz çizgiler" }, w: { s: { column: 4 } } },
@@ -745,9 +757,10 @@
     dlg.addEventListener("click", (e) => {
       if (e.target === dlg || e.target.closest("[data-close]")) { dlg.close(); return; }
       const o = e.target.closest("[data-opt]");
-      if (o) { answers[step] = FINDER[step].opts[+o.dataset.opt]; step++; render(); dlg.querySelector("button")?.focus(); return; }
-      if (e.target.closest("[data-back]")) { step--; render(); return; }
-      if (e.target.closest("[data-skip]")) { answers[step] = null; step++; render(); return; }
+      const focusQ = () => (dlg.querySelector(".finder__opt, .finder__results .card a, [data-restart]") || dlg.querySelector("button"))?.focus();
+      if (o) { answers[step] = FINDER[step].opts[+o.dataset.opt]; step++; render(); focusQ(); return; }
+      if (e.target.closest("[data-back]")) { step--; render(); focusQ(); return; }
+      if (e.target.closest("[data-skip]")) { answers[step] = null; step++; render(); focusQ(); return; }
       if (e.target.closest("[data-restart]")) { step = 0; answers = []; render(); return; }
       if (e.target.closest("[data-save-all]")) { shortlist.add(scoreGowns(answers).map((g) => g.id)); toast(t("savedAll")); }
     });
@@ -759,6 +772,8 @@
   }
 
   /* ---------- "Do I have time?" timeline ---------- */
+  // dates computed at UTC midnight are shown in UTC, so no time zone moves them a day
+  const fmtU = (d) => d.toLocaleDateString(lang === "tr" ? "tr-TR" : "en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   function initTimelines() {
     $$("[data-timeline]").forEach((box) => {
       let value = isoDate(store.get("ba-wedding", ""));
@@ -775,15 +790,16 @@
         const res = $(".tc__result", box);
         if (!value) { res.classList.remove("is-on"); return; }
         const weeks = (box.dataset.weeks || `${S.production.minWeeks},${S.production.maxWeeks}`).split(",").map(Number);
-        const day = 864e5, today = new Date(); today.setHours(0, 0, 0, 0);
-        const wedding = new Date(value + "T00:00:00");
+        // calendar arithmetic in UTC so London, Istanbul and Kolkata get the same dates (no DST drift)
+        const day = 864e5, now = new Date(), today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+        const [wy, wm, wd] = value.split("-").map(Number), wedding = new Date(Date.UTC(wy, wm - 1, wd));
         const ship = S.production.shippingDays, buffer = 14;
         const orderBy = new Date(wedding - (weeks[1] * 7 + ship + buffer) * day);
         const expressBy = new Date(wedding - (S.production.expressWeeks * 7 + ship + 7) * day);
         const daysLeft = Math.round((wedding - today) / day);
         let tone, verdict;
         if (daysLeft < 0) { tone = "late"; verdict = t("tcPast"); }
-        else if (today <= orderBy) { tone = "ok"; verdict = t("tcOk", { date: fmtDate(orderBy) }); }
+        else if (today <= orderBy) { tone = "ok"; verdict = t("tcOk", { date: fmtU(orderBy) }); }
         else if (today <= expressBy) { tone = "tight"; verdict = t("tcTight"); }
         else { tone = "late"; verdict = t("tcLate"); }
         const start = today > orderBy ? today : orderBy;
@@ -800,13 +816,13 @@
         ];
         res.innerHTML = `
           <p class="tc__verdict" data-tone="${tone}">${verdict}</p>
-          ${tone !== "late" ? `<ol class="tc__track">${ms.map((m) => `<li class="${m.d <= today ? "is-past" : ""} ${m.key ? "is-key" : ""}"><span>${t(m.k)}</span><time datetime="${m.d.toISOString().slice(0, 10)}">${fmtDate(m.d)}</time></li>`).join("")}</ol>` : ""}
+          ${tone !== "late" ? `<ol class="tc__track">${ms.map((m) => `<li class="${m.d <= today ? "is-past" : ""} ${m.key ? "is-key" : ""}"><span>${t(m.k)}</span><time datetime="${m.d.toISOString().slice(0, 10)}">${fmtU(m.d)}</time></li>`).join("")}</ol>` : ""}
           <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <a class="btn btn--wa btn--sm" target="_blank" rel="noopener" href="${wa(t("waTimeline", { date: fmtDate(wedding) }))}">${ICON.wa} ${t("tcAsk")}</a>
+            <a class="btn btn--wa btn--sm" target="_blank" rel="noopener" href="${wa(t("waTimeline", { date: fmtU(wedding) }) + (byId(currentGownId()) ? "\n" + t("waGown", { name: byId(currentGownId()).name, no: byId(currentGownId()).no, url: absUrl(gownUrl(byId(currentGownId()))) }) : ""))}">${ICON.wa} ${t("tcAsk")}</a>
           </div>`;
         res.classList.add("is-on");
       };
-      box.addEventListener("click", (e) => { if (e.target.closest("[data-tc-go]")) { value = $("[data-tc-date]", box).value; store.set("ba-wedding", value); calc(); } });
+      box.addEventListener("click", (e) => { if (e.target.closest("[data-tc-go]")) { value = $("[data-tc-date]", box).value; if (!value) { const r = $(".tc__result", box); r.innerHTML = `<p>${t("tcPick")}</p>`; r.classList.add("is-on"); $("[data-tc-date]", box).focus(); return; } store.set("ba-wedding", value); calc(); dispatchEvent(new Event("ba:wedding")); } });
       box.addEventListener("change", (e) => { if (e.target.matches("[data-tc-date]")) { value = e.target.value; store.set("ba-wedding", value); calc(); } });
       onLang(draw);
     });
@@ -855,7 +871,7 @@
       n: pick("n", "neckline"),
       f: pick("f", "features"),
       sort: ["featured", "low", "high"].includes(params.get("sort")) ? params.get("sort") : "featured",
-      q: (params.get("q") || "").trim().slice(0, 40)
+      q: Array.from((params.get("q") || "").trim()).slice(0, 40).join("")
     };
     // Search by name, by code as seen on Instagram ("BA-104", "ba104", "104") or by words in the
     // meaning / fabric — accents, İ/ı and case ignored
@@ -926,20 +942,25 @@
       $("#fbtn-filter").classList.toggle("is-active", n > 0);
       $("#fbtn-filter span").textContent = n ? `${t("filter")} (${n})` : t("filter");
     };
+    const tagsText = () => [state.q, ...GROUPS.flatMap((gr) => state[gr.key].map((v) => L(LABELS[gr.field][v])))].filter(Boolean).join(" · ");
     const showLabel = () => { const b = $("[data-showres]"); if (b) { const n = list().length; b.textContent = n === 1 ? t("showN1") : t("showN", { n }); } };
     const grid = () => {
       const l = list();
       showLabel();
       $("#count").textContent = t(l.length === 1 ? "nGown" : "nGowns", { n: l.length });
+      let mh = $("#modest-hint");
+      const modest = state.f.includes("sleeves") || state.n.includes("highneck") || state.n.includes("square");
+      if (modest && !mh) { mh = document.createElement("p"); mh.id = "modest-hint"; mh.className = "modest-hint"; $("#grid").before(mh); }
+      if (mh) { mh.hidden = !modest; mh.textContent = t("modestHint"); }
       $("#grid").innerHTML = l.length ? l.map((g) => card(g, { sizes: "(min-width: 1300px) 23vw, (min-width: 900px) 31vw, 46vw" })).join("")
-        : `<div class="grid-empty" style="grid-column:1/-1"><p class="display h3">${t("noMatch")}</p><p class="lede">${t("noMatchSub")}</p><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn--ghost" type="button" data-clear>${t("clearAll")}</button><a class="btn btn--wa" target="_blank" rel="noopener" href="${wa(t("waCustom"))}">${ICON.wa} ${t("askCustom")}</a></div></div>`;
+        : `<div class="grid-empty" style="grid-column:1/-1"><p class="display h3">${t("noMatch")}</p><p class="lede">${t("noMatchSub")}</p><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn--ghost" type="button" data-clear>${t("clearAll")}</button><a class="btn btn--wa" target="_blank" rel="noopener" href="${wa(t("waCustom") + (tagsText() ? "\n" + tagsText() : ""))}">${ICON.wa} ${t("askCustom")}</a></div></div>`;
       syncHearts(); observeReveals();
     };
     const all = () => { head(); panel(); tags(); grid(); syncUrl(); recentRail($("#grid").parentElement); const qi = $("#q"); if (qi && qi.value !== state.q) qi.value = state.q; };
     let qt;
     document.addEventListener("input", (e) => {
       if (e.target.id !== "q") return;
-      clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value.trim().slice(0, 40); tags(); grid(); syncUrl(); }, 150);
+      clearTimeout(qt); qt = setTimeout(() => { state.q = Array.from(e.target.value.trim()).slice(0, 40).join(""); tags(); grid(); syncUrl(); }, 150);
     });
 
     document.addEventListener("change", (e) => {
@@ -954,12 +975,12 @@
       if (rm) { const [k, ...rest] = rm.dataset.rm.split(":"); const v = rest.join(":"); if (k === "q") { state.q = ""; $("#q").value = ""; } else state[k] = state[k].filter((x) => x !== v); panel(); tags(); grid(); syncUrl(); return; }
       if (e.target.closest("[data-clear]")) { state.s = []; state.n = []; state.f = []; state.q = ""; const qi = $("#q"); if (qi) qi.value = ""; panel(); tags(); grid(); syncUrl(); return; }
       if (e.target.closest("[data-showres]")) {
-        $("#fpanel").classList.remove("is-open"); $("#fbtn-filter").setAttribute("aria-expanded", "false");
+        $("#fpanel").classList.remove("is-open"); $("#fbtn-filter").setAttribute("aria-expanded", "false"); document.body.classList.remove("fpanel-open");
         $("#grid").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
         return;
       }
       const fb = e.target.closest("#fbtn-filter");
-      if (fb) { const p = $("#fpanel"); const open = !p.classList.contains("is-open"); p.classList.toggle("is-open", open); fb.setAttribute("aria-expanded", String(open)); }
+      if (fb) { const p = $("#fpanel"); const open = !p.classList.contains("is-open"); p.classList.toggle("is-open", open); fb.setAttribute("aria-expanded", String(open)); document.body.classList.toggle("fpanel-open", open); }
     });
     onLang(all);
   }
@@ -985,9 +1006,15 @@
       ...(isMini ? [] : [
         { k: "sleeves", en: "Sleeves", tr: "Kollar", x: [null, "sleevesLong", "sleevesDetachable"], v: [{ en: "As shown", tr: "Görseldeki gibi" }, { en: "Add long sleeves", tr: "Uzun kol ekle" }, { en: "Detachable sleeves", tr: "Takılıp çıkarılabilir kol" }] },
         { k: "train", en: "Train", tr: "Kuyruk", x: [null, "trainShorter", "trainCathedral"], v: [{ en: "As shown", tr: "Görseldeki gibi" }, { en: "Shorter", tr: "Daha kısa" }, { en: "Cathedral", tr: "Katedral boy" }] }
-      ])
+      ]),
+      { k: "neck", en: "Neckline", tr: "Yaka", x: [null, "neckHigher", "neckIllusion"], v: [{ en: "As shown", tr: "Görseldeki gibi" }, { en: "Higher neckline", tr: "Daha kapalı yaka" }, { en: "Sheer illusion neckline", tr: "Tül (illüzyon) yaka" }] }
     ];
-    const chosen = {};
+    if (g.features.includes("sleeves")) { const o = OPTS.find((x) => x.k === "sleeves"); if (o) { o.v.splice(1, 1); o.x.splice(1, 1); } }
+    const CH_KEY = `ba-opts-${g.id}`;
+    let chosen = {};
+    // ?o=sleeves:1,train:2 — a link shared with the bride's choices opens with them selected
+    const fromUrl = Object.fromEntries((params.get("o") || "").split(",").map((p) => p.split(":")).filter((p) => p.length === 2).map(([k, v]) => [k, +v]));
+    try { const c = Object.keys(fromUrl).length ? fromUrl : JSON.parse(sessionStorage.getItem(CH_KEY) || "{}"); for (const o of OPTS) if (Number.isInteger(c[o.k]) && o.v[c[o.k]]) chosen[o.k] = c[o.k]; } catch {}
     const EX = S.extras || {};
     // null = no price shown for this choice, 0 = free, n = +$n
     const extraOf = (o, i) => { const key = o.x[i]; if (!key) return null; const v = EX[key]; return v === null || v === undefined || v === "" || !Number.isFinite(+v) ? null : +v; };
@@ -999,6 +1026,11 @@
       return `${t("from")} <b>${money(tot)}</b> ${t("madeToMeasure")}${fxHint(tot)}${tot > g.price ? `<span class="gown__price-note">${t("withChoices")}</span>` : ""}`;
     };
 
+    const optsNote = () => {
+      const any = Object.values(chosen).some((i) => i > 0);
+      const n = $("#opts-note"); if (n) n.hidden = !Object.entries(chosen).some(([k, i]) => i > 0 && extraOf(OPTS.find((o) => o.k === k), i) === null);
+      const e = $("#etsy-note"); if (e) e.hidden = !any;
+    };
     const render = () => {
       document.title = `${g.name} — ${L(LABELS.silhouette[g.silhouette])} ${kind(g)} | Burak Altaş Atelier`;
       const meta = $('meta[name="description"]'); if (meta) meta.content = L(g.story);
@@ -1018,11 +1050,11 @@
           </ol>
           <div>
             <h1 class="gown__name">${esc(g.name)}</h1>
-            <p class="gown__meaning">— ${esc(L(g.meaning))}</p>
+            ${meaningOf(g) ? `<p class="gown__meaning">— ${esc(meaningOf(g))}</p>` : ""}
             ${g.draft ? `<p class="gown__concept"><b>Taslak önizleme</b> Bu model sitede henüz görünmüyor; panelde "Taslak" kutusunu kaldırınca yayına girer.</p>` : ""}
             ${g.concept ? `<p class="gown__concept"><b>${t("conceptTag")}</b> ${t("conceptNote")}</p>` : ""}
           </div>
-          ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")}</p></div>` : ""}
+          ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")} ${Number.isFinite(S.shipping) ? t("shipTo", { price: S.shipping ? money(S.shipping) : t("free") }) : t("shipOnQuote")} <a href="atelier.html#faq-customs">${t("customsLink")}</a></p></div>` : ""}
           <p class="gown__story">${esc(L(g.story))}</p>
           <dl class="specs">
             <dt>${t("silhouette")}</dt><dd>${L(LABELS.silhouette[g.silhouette])}</dd>
@@ -1038,8 +1070,10 @@
             ${OPTS.map((o) => `<fieldset class="fpanel__group" style="border:0;padding:0;margin:0"><legend class="sr-only">${L(o)}</legend><span aria-hidden="true">${L(o)}</span>
               <div class="chips">${o.v.map((v, i) => `<label class="chip"><input type="radio" name="opt-${o.k}" value="${i}" data-opt="${o.k}" ${chosen[o.k] === i ? "checked" : ""}><span>${L(v)}${S.showPrices && extraLabel(extraOf(o, i)) ? `<small class="chip__price">${extraLabel(extraOf(o, i))}</small>` : ""}</span></label>`).join("")}</div></fieldset>`).join("")}
           </div>
+          <p class="small opts__note" id="opts-note" hidden>${t("extrasOnQuote")}</p>
           <div class="gown__ctas">
             <a class="btn btn--etsy btn--block" href="${etsyFor(g)}" target="_blank" rel="noopener" data-etsy>${ICON.bag} ${t("orderEtsy")}</a>
+            <p class="small" id="etsy-note" hidden>${t("etsyChoices")}</p>
             <div class="gown__ctas-row">
               <a class="btn btn--wa" href="#" target="_blank" rel="noopener" data-wa-gown>${ICON.wa} ${t("askWa")}</a>
               <button class="icon-btn heart" style="margin:0" type="button" data-heart="${g.id}" aria-pressed="false" aria-label="${t("addShortlist")}">${ICON.heart}</button>
@@ -1055,7 +1089,7 @@
           </div>
         </div>
       </aside>`;
-      updateWa();
+      updateWa(); optsNote();
       syncHearts();
 
       // Pairing + more from collection
@@ -1114,13 +1148,14 @@
 
     document.addEventListener("change", (e) => {
       const r = e.target.closest("[data-opt]");
-      if (r) { chosen[r.dataset.opt] = +r.value; updateWa(); const p = $("#gown-price"); if (p) p.innerHTML = priceHtml(); }
+      if (r) { chosen[r.dataset.opt] = +r.value; try { sessionStorage.setItem(CH_KEY, JSON.stringify(chosen)); } catch {} updateWa(); const p = $("#gown-price"); if (p) p.innerHTML = priceHtml(); optsNote(); }
     });
     document.addEventListener("click", (e) => {
-      if (e.target.closest("[data-share]")) share({ title: `${g.name} — Burak Altaş Atelier`, text: t("shareText", { name: g.name }), url: absUrl(gownUrl(g)) });
+      if (e.target.closest("[data-share]")) { const o = Object.entries(chosen).filter(([, i]) => i > 0).map(([k, i]) => `${k}:${i}`).join(","); share({ title: `${g.name} — Burak Altaş Atelier`, text: t("shareText", { name: g.name }) + (optText() ? ` (${optText()})` : ""), url: absUrl(gownUrl(g)) + (o ? `?o=${o}` : "") }); }
       const z = e.target.closest("[data-zoom]");
       if (z) openLightbox(g, +z.dataset.zoom);
     });
+    addEventListener("ba:wedding", updateWa);
     onLang(render);
   }
 
@@ -1220,6 +1255,8 @@
       pts.delete(e.pointerId);
       stage.classList.remove("is-panning");
       if (pinch) { if (pts.size < 2) { pinch = null; remember(); } return; }
+      // a sideways swipe on an unzoomed photo goes to the next / previous one
+      if (pan && pan.moved && s <= 1.01 && e.type === "pointerup" && Math.abs(e.clientX - pan.x) > 60 && Math.abs(e.clientY - pan.y) < 80) { go(i + (e.clientX < pan.x ? 1 : -1)); pan = null; return; }
       if (pan && !pan.moved && e.type === "pointerup") s > 1 ? zoomTo(1) : zoomTo(preferred(), e.clientX, e.clientY);
       pan = null;
     };
@@ -1229,7 +1266,10 @@
     range.addEventListener("change", remember);
     const onResize = () => apply(false);
     addEventListener("resize", onResize);
-    dlg.addEventListener("close", () => { removeEventListener("resize", onResize); opener?.focus?.(); }, { once: true });
+    const onPop = () => { if (dlg.open) dlg.close(); };
+    history.pushState({ lb: 1 }, "");
+    addEventListener("popstate", onPop);
+    dlg.addEventListener("close", () => { removeEventListener("resize", onResize); removeEventListener("popstate", onPop); if (history.state && history.state.lb) history.back(); opener?.focus?.(); }, { once: true });
 
     go(i); dlg.showModal();
     dlg.onclose = null;
@@ -1280,7 +1320,7 @@
   /* ---------- Shortlist: compare side by side ---------- */
   function compareTable(gowns) {
     const rows = [
-      [t("cmpPrice"), (g) => (S.showPrices && g.price ? money(g.price) : "")],
+      [t("cmpPrice"), (g) => (S.showPrices && g.price ? money(g.price) + fxHint(g.price) : "")],
       [t("silhouette"), (g) => L(LABELS.silhouette[g.silhouette])],
       [t("neckline"), (g) => L(LABELS.neckline[g.neckline])],
       [t("details"), (g) => g.features.map((f) => L(LABELS.features[f])).join(" · ")],
@@ -1291,12 +1331,15 @@
     ];
     return `<div class="cmp__scroll" tabindex="0" role="region" aria-label="${t("compare")}"><table class="cmp__t">
       <thead><tr><td></td>${gowns.map((g) => `<th scope="col"><a href="${gownUrl(g)}"><span class="cmp__img">${img(g.images[0], gownAlt(g, 0), { sizes: "160px", w: 400 })}</span><span class="cmp__name">${esc(g.name)}</span></a></th>`).join("")}</tr></thead>
-      <tbody>${rows.map(([label, f]) => `<tr><th scope="row">${label}</th>${gowns.map((g) => `<td>${f(g) || "—"}</td>`).join("")}</tr>`).join("")}</tbody>
+      <tbody>${rows.filter(([, f]) => gowns.some((g) => f(g))).map(([label, f]) => `<tr><th scope="row">${label}</th>${gowns.map((g) => `<td>${f(g) || "—"}</td>`).join("")}</tr>`).join("")}</tbody>
     </table></div>`;
   }
 
   function renderShortlist() {
-    const shared = (params.get("ids") || "").split(",").filter(byId);
+    const sharedIds = [...new Set((params.get("ids") || "").split(",").filter(byId))];
+    // your own list opened from the link you sent yourself is still "your" list
+    const mine = shortlist.all();
+    const shared = sharedIds.length && !(sharedIds.length === mine.length && sharedIds.every((id) => mine.includes(id))) ? sharedIds : [];
     const ids = shared.length ? shared : shortlist.all();
     const gowns = ids.map(byId);
     $("#sl-title").innerHTML = shared.length ? t("slSharedTitle") : t("slTitle");
@@ -1310,12 +1353,14 @@
     const link = absUrl(`shortlist.html?ids=${ids.join(",")}`);
     box.innerHTML = `
       <div class="sl-actions">
-        ${shared.length ? `<button class="btn" type="button" data-keep>${t("slKeep")}</button>` : `<button class="btn" type="button" data-sl-share>${ICON.share} ${t("slShare")}</button>`}
+        ${shared.length ? `<button class="btn" type="button" data-keep>${t("slKeep")}</button><button class="btn btn--wa" type="button" data-sl-reply>${ICON.wa} ${t("slReply")}</button>` : `<button class="btn" type="button" data-sl-share>${ICON.share} ${t("slShare")}</button>`}
         <a class="btn btn--wa" target="_blank" rel="noopener" href="${wa(t("waShortlist", { list: names, url: link }))}">${ICON.wa} ${t("slAsk")}</a>
         <a class="btn btn--ghost" href="contact.html?ids=${ids.join(",")}">${t("enquire")}</a>
         ${gowns.length > 1 ? `<button class="btn btn--ghost" type="button" data-sl-compare aria-expanded="false" aria-controls="sl-cmp">${t("compare")}</button>` : ""}
       </div>
       <div class="cmp" id="sl-cmp" hidden></div>
+
+      <div class="grid" style="padding-top:0">${gowns.map((g) => card(g, { sizes: "(min-width: 900px) 25vw, 50vw" })).join("")}</div>
       ${shared.length ? "" : `
       <div class="sl-save">
         <p><b>${t("slSaveTitle")}</b> ${t(/Instagram|FBAN|FBAV/.test(navigator.userAgent) ? "slSaveIg" : "slSaveText")}</p>
@@ -1324,8 +1369,7 @@
           <a class="btn btn--ghost btn--sm" href="mailto:?subject=${encodeURIComponent(t("slShareTitle"))}&body=${encodeURIComponent(`${t("slSelfText")}\n${names}\n\n${link}`)}">${t("slSelfMail")}</a>
           <button class="btn btn--ghost btn--sm" type="button" data-sl-copy>${t("slSelfCopy")}</button>
         </div>
-      </div>`}
-      <div class="grid" style="padding-top:0">${gowns.map((g) => card(g, { sizes: "(min-width: 900px) 25vw, 50vw" })).join("")}</div>`;
+      </div>`}`;
     box.onclick = async (e) => {
       if (e.target.closest("[data-sl-share]")) share({ title: t("slShareTitle"), text: t("slShareText"), url: link });
       const cb = e.target.closest("[data-sl-compare]");
@@ -1337,6 +1381,8 @@
       }
       if (e.target.closest("[data-sl-copy]")) { try { await navigator.clipboard.writeText(link); toast(t("linkCopied")); } catch { prompt(t("slSelfCopy"), link); } }
       if (e.target.closest("[data-keep]")) { shortlist.add(shared); toast(t("savedAll")); }
+      // the person the list was shared with hearts her picks, then sends them back on WhatsApp (to anyone)
+      if (e.target.closest("[data-sl-reply]")) { const mine = shared.filter((id) => shortlist.has(id)); const picks = (mine.length ? mine : shared).map(byId); window.open(`https://wa.me/?text=${encodeURIComponent(t("slReplyText", { list: picks.map((x) => `${x.name} (${x.no})`).join(", ") }) + "\n" + absUrl(`shortlist.html?ids=${picks.map((x) => x.id).join(",")}`))}`, "_blank", "noopener"); }
     };
     syncHearts(); observeReveals();
   }
@@ -1352,7 +1398,8 @@
     });
     const pre =[...new Set([...(params.get("ids") || "").split(","), params.get("g") || ""].filter(byId))];
     const picked = pre.length ? pre : shortlist.all();
-    const data = store.get("ba-enquiry", {});
+    const d0 = store.get("ba-enquiry", {});
+    const data = d0 && typeof d0 === "object" && !Array.isArray(d0) ? d0 : {};
     let step = 0;
     // Countries are stored as ISO codes and named in the bride's language
     const COUNTRIES = ["US", "GB", "DE", "NL", "FR", "AT", "CH", "SE", "DK", "NO", "BE", "IT", "ES", "CA", "AU", "AE", "SA", "QA", "KW", "BH", "OM", "IQ", "TR", "OTHER"];
@@ -1380,9 +1427,9 @@
           <p class="eyebrow">02 · ${t("wz2")}</p>
           <h2>${t("wz2h")}</h2>
           <div class="wizard__grid">
-            <label class="field"><span>${t("weddingDate")}</span><input class="input" type="date" name="date" value="${esc(isoDate(data.date) || isoDate(store.get("ba-wedding", "")))}"></label>
+            <label class="field"><span>${t("weddingDate")}</span><input class="input" type="date" name="date" min="${localISO()}" aria-describedby="err-date" value="${esc(isoDate(data.date) || isoDate(store.get("ba-wedding", "")))}"><small class="field__err" id="err-date" aria-live="polite"></small></label>
             <label class="field"><span>${t("country")}</span><select class="select" name="country"><option value="">—</option>${COUNTRIES.map((c) => ({ c, n: countryName(c) })).sort((a, b) => (a.c === "OTHER") - (b.c === "OTHER") || a.n.localeCompare(b.n, lang)).map(({ c, n }) => `<option value="${c}" ${data.country === c ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>
-            <fieldset class="field full" style="border:0;padding:0;margin:0"><legend>${t("budget")}</legend><div class="chips mt-s">${BUDGETS.map((b) => `<label class="chip"><input type="radio" name="budget" value="${b}" ${data.budget === b ? "checked" : ""}><span>${b}</span></label>`).join("")}</div></fieldset>
+            <fieldset class="field full" style="border:0;padding:0;margin:0"><legend>${t("budget")}</legend><div class="chips mt-s">${BUDGETS.map((b) => `<label class="chip"><input type="radio" name="budget" value="${b}" ${data.budget === b ? "checked" : ""}><span>${b}${(() => { const n = b.match(/[\d,]+/g).map((x) => +x.replace(/,/g, "")); const a = fxText(n[0]), z = n[1] ? fxText(n[1]) : ""; return a ? ` <small class="chip__price">≈ ${a}${z ? "–" + z : "+"}</small>` : ""; })()}</span></label>`).join("")}</div></fieldset>
             <fieldset class="field full" style="border:0;padding:0;margin:0"><legend>${t("fitting")}</legend><div class="chips mt-s">${["fitGuide", "fitVideo", "fitVisit"].map((k) => `<label class="chip"><input type="radio" name="fitting" value="${k}" ${data.fitting === k ? "checked" : ""}><span>${t(k)}</span></label>`).join("")}</div></fieldset>
           </div>
         </section>
@@ -1445,11 +1492,15 @@
     };
     document.addEventListener("click", (e) => {
       if (!e.target.closest("#wizard")) return;
-      if (e.target.closest("[data-next]")) { collect(); step++; render(); $("#wizard").scrollIntoView({ block: "start" }); $("#wizard .wizard__pane.is-on input, #wizard .wizard__pane.is-on select")?.focus({ preventScroll: true }); }
+      if (e.target.closest("[data-next]")) {
+        const dt = $("#wizard .wizard__pane.is-on [name=date]");
+        if (dt && dt.value && dt.value < localISO()) { $("#err-date").textContent = t("pastDate"); dt.setAttribute("aria-invalid", "true"); dt.focus(); return; }
+        collect(); step++; render(); $("#wizard").scrollIntoView({ block: "start" }); $("#wizard .wizard__pane.is-on input, #wizard .wizard__pane.is-on select")?.focus({ preventScroll: true }); }
       if (e.target.closest("[data-prev]")) { collect(); step--; render(); }
       const un = e.target.closest("[data-unpick]");
       if (un) { collect(); picked.splice(picked.indexOf(un.dataset.unpick), 1); render(); }
     });
+    document.addEventListener("input", (e) => { if (e.target.closest("#enq")) collect(); });
     document.addEventListener("change", (e) => {
       if (e.target.id === "add-gown" && e.target.value) { collect(); picked.push(e.target.value); render(); $("#add-gown").focus(); }
       if (e.target.name === "prefer") { collect(); const b = $("[data-submit]"); if (b) { b.innerHTML = submitLabel(); b.classList.toggle("btn--wa", !byEmail()); } }

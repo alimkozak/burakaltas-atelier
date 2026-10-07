@@ -25,8 +25,12 @@ window.SITE = {
     "sleevesLong": null,
     "sleevesDetachable": null,
     "trainShorter": null,
-    "trainCathedral": null
+    "trainCathedral": null,
+    "neckHigher": null,
+    "neckIllusion": null
   },
+  // Kargo ücreti (USD). null = "teklifte netleşir" yazar
+  shipping: null,
   currency: "USD",
   // Form gönderimi için (isteğe bağlı) formspree.io form ID'si. Boşsa form WhatsApp'a yönlenir.
   formspreeId: "",

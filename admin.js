@@ -105,6 +105,8 @@ window.SITE = {
   showPrices: ${S.showPrices ? "true" : "false"},
   // Kişiselleştirme ücretleri (USD). null = sitede ücret gösterme, 0 = "ücretsiz", sayı = "+$X"
   extras: ${js(cleanExtras(S.extras || {})).replace(/\n/g, "\n  ")},
+  // Kargo ücreti (USD). null = sitede "teklifte netleşir" yazar
+  shipping: ${Number.isFinite(S.shipping) ? S.shipping : "null"},
   currency: ${q(S.currency || "USD")},
   // Form gönderimi için (isteğe bağlı) formspree.io form ID'si. Boşsa form WhatsApp'a yönlenir.
   formspreeId: ${q(S.formspreeId)},
@@ -179,7 +181,7 @@ function cleanGown(g, collections) {
       ? { model: { height: Math.min(230, Math.max(0, Math.round(Number(g.model.height) || 0))), size: str(g.model.size, 24).trim() } } : {})
   };
 }
-const EXTRA_KEYS = ["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral"];
+const EXTRA_KEYS = ["colour", "sleevesLong", "sleevesDetachable", "trainShorter", "trainCathedral", "neckHigher", "neckIllusion"];
 // Empty = don't show a price for that option; 0 = "free"; a number = "+$X"
 const cleanExtras = (o = {}) => Object.fromEntries(EXTRA_KEYS.map((k) => {
   const v = o[k];
@@ -244,6 +246,7 @@ async function api(req, res, route, remote) {
         days: Array.isArray(A.days) ? [...new Set(A.days.map(Number))].filter((d) => d >= 0 && d <= 6).sort() : S.appointments.days
       },
       extras: cleanExtras(c.extras),
+      shipping: c.shipping === "" || c.shipping === null || c.shipping === undefined || !Number.isFinite(+c.shipping) ? null : Math.max(0, Math.round(+c.shipping)),
       analytics: { cloudflareToken: (/[a-f0-9]{32}/i.exec(str(c.analytics && c.analytics.cloudflareToken, 400)) || [""])[0].toLowerCase() },
       chat: (() => {
         // Accept either the bare IDs or the whole embed address pasted from tawk.to

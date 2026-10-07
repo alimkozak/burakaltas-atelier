@@ -167,7 +167,9 @@ function build({ dist = false } = {}) {
 
   // Sitemap: every page in both languages, each pointing at its twin
   const today = new Date().toISOString().slice(0, 10);
-  const SM_PAGES = ["index.html", "collection.html", "atelier.html", "designer.html", "fitting.html", "contact.html", "policies.html"];
+  // the designer page is listed only once Burak's portrait or story is in
+  const D = W.DESIGNER || {}, designerReady = !!(D.photo || (D.bio && (D.bio.tr || D.bio.en)));
+  const SM_PAGES = ["index.html", "collection.html", "atelier.html", ...(designerReady ? ["designer.html"] : []), "fitting.html", "contact.html", "policies.html"];
   const loc = (file, lang) => `${S.domain}/${lang === "tr" ? "tr/" : ""}${file === "index.html" ? "" : file}`;
   const alt = (file) => ["en", "tr"].map((l) => `<xhtml:link rel="alternate" hreflang="${l}" href="${loc(file, l)}"/>`).join("") + `<xhtml:link rel="alternate" hreflang="x-default" href="${loc(file, "en")}"/>`;
   let sm = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n`;

@@ -70,7 +70,8 @@
   ];
   let type = TYPES.some((x) => x.id === params.get("type")) ? params.get("type") : "consult";
   const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const city = () => (userTz.includes("/") ? userTz.split("/").pop().replace(/_/g, " ") : userTz);
+  const OLD_TZ = { Calcutta: "Kolkata", Saigon: "Ho Chi Minh", Kiev: "Kyiv", Rangoon: "Yangon", Katmandu: "Kathmandu" };
+  const city = () => { const c = userTz.includes("/") ? userTz.split("/").pop().replace(/_/g, " ") : userTz; return OLD_TZ[c] || c; };
 
   function renderTypes() {
     $("#appt-types").innerHTML = TYPES.map((x) => `
@@ -141,7 +142,8 @@
     return out;
   }
   function gownsPrefill() {
-    const ids = [...new Set([params.get("g"), ...store.get("ba-shortlist", [])].filter((x) => x && byId(x)))];
+    const sl = store.get("ba-shortlist", []);
+    const ids = [...new Set([params.get("g"), ...(Array.isArray(sl) ? sl : [])].filter((x) => typeof x === "string" && byId(x)))];
     return ids.map((id) => byId(id).name).join(", ");
   }
   function pickHtml() {
@@ -167,7 +169,8 @@
   }
   function renderRequest() {
     // Keep whatever the bride already typed when the language (or anything else) re-renders the form
-    const old = $("#bk-form") ? Object.fromEntries(new FormData($("#bk-form"))) : null;
+    let draft = null; try { draft = JSON.parse(sessionStorage.getItem("ba-bk-draft") || "null"); } catch {}
+    const old = $("#bk-form") ? Object.fromEntries(new FormData($("#bk-form"))) : draft && typeof draft === "object" ? draft : null;
     const prof = store.get("ba-enquiry", {});
     const val = (k, fallback) => esc(old ? old[k] ?? "" : fallback || "");
     $("#booking").innerHTML = `
@@ -227,6 +230,8 @@
     }
     if (e.target.closest("[data-again]")) { slot = null; renderBooking(); $("#book").scrollIntoView({ block: "start" }); }
   });
+  // keep a draft of the booking form for this tab (a language switch loads the other page)
+  document.addEventListener("input", (e) => { const f = e.target.closest("#bk-form"); if (f) try { sessionStorage.setItem("ba-bk-draft", JSON.stringify(Object.fromEntries(new FormData(f)))); } catch {} });
   document.addEventListener("submit", (e) => {
     if (e.target.id !== "bk-form") return;
     e.preventDefault();
@@ -278,13 +283,13 @@
     { en: "This measurement card open — or printed", tr: "Bu ölçü kartı açık — ya da yazdırılmış" }
   ];
   function renderPrep() {
-    const done = store.get("ba-prep", []);
+    const pd = store.get("ba-prep", []), done = Array.isArray(pd) ? pd : [];
     $("#checklist").innerHTML = PREP.map((p, i) => `<li><label class="check"><input type="checkbox" data-prep="${i}" ${done.includes(i) ? "checked" : ""}> <span>${L(p)}</span></label></li>`).join("");
   }
   document.addEventListener("change", (e) => {
     const c = e.target.closest("[data-prep]");
     if (!c) return;
-    const done = new Set(store.get("ba-prep", []));
+    const pd = store.get("ba-prep", []), done = new Set(Array.isArray(pd) ? pd : []);
     c.checked ? done.add(+c.dataset.prep) : done.delete(+c.dataset.prep);
     store.set("ba-prep", [...done]);
   });
@@ -313,7 +318,7 @@
     clearAsk: { en: "Clear everything on this card (measurements, name and notes) on this device?", tr: "Bu cihazdaki kartın tamamı (ölçüler, ad ve notlar) silinsin mi?" },
     cleared: { en: "Card cleared.", tr: "Kart temizlendi." },
     undo: { en: "Undo", tr: "Geri al" },
-    sentNote: { en: "Your card is ready in WhatsApp — it reaches us only once you press Send there.", tr: "Kartınız WhatsApp'ta hazır — bize ulaşması için orada Gönder'e basın." },
+    sentNote: { en: "Your card is ready in WhatsApp — it reaches us only once you press Send there. Add your three photos (front, side, back) in the same chat.", tr: "Kartınız WhatsApp'ta hazır — bize ulaşması için orada Gönder'e basın." },
     again: { en: "Open again", tr: "Tekrar aç" },
     figHint: { en: "Select a measurement to see it on the figure", tr: "Figürde görmek için bir ölçü seçin" },
     figLabel: { en: "Body diagram with numbered measurement lines", tr: "Numaralı ölçü çizgileriyle vücut şeması" },
@@ -540,7 +545,7 @@
     <path d="M140 90c6 30 10 80 12 120 1 20 2 36 4 48M134 132c2 28 4 58 6 82 1 16 2 30 4 42"/>
     <path d="M64 250c2 60 8 120 14 190M136 250c-2 60-8 120-14 190M100 262c-1 58-3 118-6 178M100 262c1 58 3 118 6 178"/></g>`;
   const figure = (list = MEASURES) => `<svg class="mfig" viewBox="0 0 215 460" role="img" aria-label="${esc(L(MX.figLabel))}">${BODY}
-    ${list.map((m) => `<g class="mline${m.back ? " mline--back" : ""}" data-fig="${m.id}">${m.fig}<text x="${m.lx}" y="${m.ly}">${MEASURES.indexOf(m) + 1}</text></g>`).join("")}</svg>`;
+    ${list.map((m) => `<g class="mline${m.back ? " mline--back" : ""}" data-fig="${m.id}">${m.fig}<text x="${m.lx}" y="${m.ly}">${list.indexOf(m) + 1}</text></g>`).join("")}</svg>`;
 
   /* Numbers: "86", "86,5", "86.5 cm", "34 1/2", "34½", "34 in", full-width digits, and 5'6" for height */
   const VULGAR = { "¼": " 1/4", "½": " 1/2", "¾": " 3/4", "⅓": " 1/3", "⅔": " 2/3", "⅛": " 1/8", "⅜": " 3/8", "⅝": " 5/8", "⅞": " 7/8" };
@@ -744,6 +749,8 @@
     $$(".mgroup").forEach((s) => (s.hidden = !$$(".mrow:not([hidden])", s).length));
     const bare = $("[data-mbare]"); if (bare) bare.hidden = !card.o.noshoes;
     $$(".mfig .mline").forEach((g) => g.classList.toggle("is-off", !visible(byM[g.dataset.fig])));
+    // 1, 2, 3… over the rows that are shown (no gaps when sleeves or legs are hidden)
+    rowsShown().forEach((m, k) => { const n = $(`.mrow[data-m="${m.id}"] .mrow__n`); if (n) n.textContent = num(k); const tx = $(`.mcard__figwrap [data-fig="${m.id}"] text`); if (tx) tx.textContent = k + 1; });
   }
   function showIssue(m) {
     const el = $("#w-" + m.id); if (!el) return;
@@ -769,7 +776,7 @@
     $$(".mfig .mline").forEach((g) => g.classList.toggle("is-on", g.dataset.fig === id));
     $$(".mrow").forEach((r) => r.classList.toggle("is-on", r.dataset.m === id));
     const m = byM[id];
-    if (m) $("#mcap").innerHTML = `<b>${num(MEASURES.indexOf(m))} · ${L(m.name)}</b>${m.back ? ` <small>(${L(MX.fromBack)})</small>` : ""}<br>${L(m.how)}`;
+    if (m) $("#mcap").innerHTML = `<b>${num(Math.max(0, rowsShown().indexOf(m)))} · ${L(m.name)}</b>${m.back ? ` <small>(${L(MX.fromBack)})</small>` : ""}<br>${L(m.how)}`;
   }
   const focusField = (id) => { const el = $("#m-" + id); if (!el) return; el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); el.focus({ preventScroll: true }); };
 
@@ -791,7 +798,7 @@
     const odd = new Set(flagged().map((m) => m.id));
     const missing = [];
     for (const m of rowsShown()) {
-      const i = MEASURES.indexOf(m);
+      const i = rowsShown().indexOf(m);
       // English messages carry the Turkish name too, so the atelier reads every line at a glance
       const name = lang() === "tr" ? m.name.tr : `${m.name.en} / ${m.name[other]}`;
       if (!isNum(m.id)) { missing.push(`${num(i)} ${lang() === "tr" ? m.name.tr : m.name.en}`); continue; }
@@ -900,7 +907,7 @@
   });
   // The same card open in another tab: take its newer copy unless she's typing here
   addEventListener("storage", (e) => {
-    if (e.key !== "ba-measure" || inCard(document.activeElement)) return;
+    if (e.key !== "ba-measure" || (inCard(document.activeElement) && e.newValue !== null)) return;
     card = loadCard(); renderCard();
   });
 
@@ -944,7 +951,7 @@
           <p class="pc__contact">WhatsApp ${esc(S.phoneDisplay)}<br>${esc(S.instagramHandle)}<br>${esc(S.domain.replace(/^https?:\/\//, ""))}</p>
         </div>
         <table class="pc__table${blank ? " pc__table--blank" : ""}"><thead><tr><th></th><th></th>${blank ? `<th>${L(MX.first)}</th><th>${L(MX.second)}</th>` : `<th>${unitLabel()}</th>`}</tr></thead><tbody>
-          ${list.map((m) => `<tr><td class="pc__n">${num(MEASURES.indexOf(m))}</td><td><b>${both(m.name)}</b>${m.when && blank ? ` <em class="pc__if">(${esc(F(MX.onlyIf, { c: L(WHEN[m.when].c) }))})</em>` : ""}<br><span>${esc(short(m))}</span></td>${blank ? `<td class="pc__v"></td><td class="pc__v"></td>` : `<td class="pc__v">${val(m)}</td>`}</tr>`).join("")}
+          ${list.map((m) => `<tr><td class="pc__n">${num(list.indexOf(m))}</td><td><b>${both(m.name)}</b>${m.when && blank ? ` <em class="pc__if">(${esc(F(MX.onlyIf, { c: L(WHEN[m.when].c) }))})</em>` : ""}<br><span>${esc(short(m))}</span></td>${blank ? `<td class="pc__v"></td><td class="pc__v"></td>` : `<td class="pc__v">${val(m)}</td>`}</tr>`).join("")}
         </tbody></table>
       </div>`;
     document.body.classList.add("is-printing");

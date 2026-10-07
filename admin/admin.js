@@ -244,12 +244,74 @@
   /* ======================================================================
      MODELLER
      ====================================================================== */
+  /* ---------- Quick edit: Etsy links, prices, featured, draft — every gown on one screen ---------- */
+  const ETSY = /^https:\/\/(www\.)?(etsy\.com|etsy\.me)\//;
+  function renderQuick() {
+    const rows = DB.gowns.map((g) => ({ id: g.id, etsy: g.etsy || "", price: g.price || 0, featured: !!g.featured, draft: !!g.draft }));
+    view.innerHTML = `
+      <div class="head">
+        <div><h1>Hızlı düzenleme <small>${rows.length} model</small></h1><p>Etsy ilan linklerini, fiyatları ve işaretleri tek ekranda girin, sonra bir kez kaydedin. Etsy'de ilanı açın › <b>Paylaş</b> › linki kopyalayıp ilgili satıra yapıştırın.</p></div>
+        <a class="btn btn--ghost" href="#modeller">← Modeller</a>
+      </div>
+      <div class="toolbar"><input type="search" id="qq" placeholder="Model adı ya da kodu ile ara…" aria-label="Ara"></div>
+      <div class="qtable__wrap"><table class="qtable">
+        <thead><tr><th>Kod</th><th>Model</th><th>Fiyat (USD)</th><th>Etsy ilan linki</th><th title="Ana sayfada öne çıkar">★</th><th>Taslak</th></tr></thead>
+        <tbody>${DB.gowns.map((g, i) => `
+          <tr data-row="${i}" data-q="${esc(`${g.name} ${g.no}`.toLocaleLowerCase("tr"))}">
+            <td class="qtable__no">${esc(g.no)}</td>
+            <td><a href="#model=${encodeURIComponent(g.id)}">${esc(g.name)}</a></td>
+            <td><input class="in" type="number" min="0" step="10" data-f="price" value="${g.price || ""}" aria-label="${esc(g.name)} fiyat"></td>
+            <td><input class="in" type="url" data-f="etsy" value="${esc(g.etsy || "")}" placeholder="https://www.etsy.com/listing/…" aria-label="${esc(g.name)} Etsy linki"><small class="qerr" hidden>Geçerli bir Etsy linki değil</small></td>
+            <td><input type="checkbox" data-f="featured" ${g.featured ? "checked" : ""} aria-label="${esc(g.name)} öne çıkar"></td>
+            <td><input type="checkbox" data-f="draft" ${g.draft ? "checked" : ""} aria-label="${esc(g.name)} taslak"></td>
+          </tr>`).join("")}</tbody>
+      </table></div>
+      <div class="savebar"><span class="msg">Değişiklik yok</span><button type="button" class="btn btn--ok" data-qsave>Kaydet</button></div>`;
+    $("#qq").addEventListener("input", (e) => {
+      const q = e.target.value.trim().toLocaleLowerCase("tr");
+      $$("tr[data-row]").forEach((tr) => (tr.hidden = !!q && !tr.dataset.q.includes(q)));
+    });
+    const check = (tr) => {
+      const v = $('[data-f="etsy"]', tr).value.trim();
+      const bad = !!v && !ETSY.test(v);
+      $(".qerr", tr).hidden = !bad;
+      $('[data-f="etsy"]', tr).setAttribute("aria-invalid", String(bad));
+      return !bad;
+    };
+    view.oninput = (e) => {
+      const tr = e.target.closest("tr[data-row]"); if (!tr) return;
+      const r = rows[+tr.dataset.row], f = e.target.dataset.f;
+      r[f] = e.target.type === "checkbox" ? e.target.checked : f === "price" ? Number(e.target.value) || 0 : e.target.value.trim();
+      if (f === "etsy") check(tr);
+      markDirty();
+    };
+    view.onchange = view.oninput;
+    view.onclick = async (e) => {
+      if (!e.target.closest("[data-qsave]")) return;
+      const trs = [...$$("tr[data-row]")];
+      const bad = trs.filter((tr) => !check(tr));
+      const noPrice = rows.filter((r) => !r.draft && !(r.price > 0));
+      const msg = $(".savebar .msg");
+      if (bad.length) { msg.textContent = `${bad.length} satırda Etsy linki hatalı`; msg.classList.add("err"); bad[0].hidden = false; $('[data-f="etsy"]', bad[0]).focus(); return; }
+      if (noPrice.length) { msg.textContent = `${noPrice.length} modelin fiyatı yok (taslak değilse fiyat gerekli)`; msg.classList.add("err"); return; }
+      const list = DB.gowns.map((g, i) => {
+        const r = rows[i], x = { ...g, etsy: r.etsy, price: r.price };
+        r.featured ? (x.featured = true) : delete x.featured;
+        r.draft ? (x.draft = true) : delete x.draft;
+        return x;
+      });
+      const btn = e.target.closest("[data-qsave]"); btn.disabled = true; btn.textContent = "Kaydediliyor…";
+      try { await post("gowns", { gowns: list }); dirty = false; await reload(); toast("Kaydedildi · site güncellendi"); renderQuick(); }
+      catch (err) { msg.textContent = err.message; msg.classList.add("err"); btn.disabled = false; btn.textContent = "Kaydet"; }
+    };
+  }
+
   function renderList() {
     const G = DB.gowns, C = DB.collections;
     view.innerHTML = `
       <div class="head">
         <div><h1>Modeller <small>${G.length} model</small></h1><p>Sıralama sitedeki sırayı belirler. ★ işaretli modeller ana sayfada öne çıkar.</p></div>
-        <a class="btn" href="#yeni">+ Yeni model</a>
+        <div class="row"><a class="btn btn--ghost" href="#hizli">Hızlı düzenleme</a><a class="btn" href="#yeni">+ Yeni model</a></div>
       </div>
       <div class="toolbar">
         <input type="search" id="q" placeholder="Model adı ya da kodu ile ara…" aria-label="Ara">
@@ -658,7 +720,7 @@
       ["Katalog", [
         { st: ok(!n(sample)), t: "Gerçek fotoğraflar", d: n(sample) ? `${n(sample)} modelde örnek (Unsplash) fotoğraf var: ${names(sample)}` : "Tüm modeller kendi fotoğraflarınızla", go: "#modeller" },
         { st: ok(!n(noPrice)), t: "Fiyatlar", d: n(noPrice) ? `${n(noPrice)} modelin fiyatı yok: ${names(noPrice)}` : "Tüm modellerin fiyatı var", go: "#modeller" },
-        { st: ok(!n(noEtsy)), t: "Etsy ilan linkleri", d: n(noEtsy) ? `${n(noEtsy)} modelde Etsy linki yok — buton mağaza ana sayfasına gider` : "Her model kendi ilanına gidiyor", go: "#modeller" },
+        { st: ok(!n(noEtsy)), t: "Etsy ilan linkleri", d: n(noEtsy) ? `${n(noEtsy)} modelde Etsy linki yok — buton mağaza ana sayfasına gider` : "Her model kendi ilanına gidiyor", go: "#hizli" },
         { st: ok(!n(noEn)), t: "İngilizce açıklamalar", d: n(noEn) ? `${n(noEn)} modelde İngilizce hikâye yok: ${names(noEn)}` : "Tüm modeller iki dilde", go: "#modeller" },
         { st: drafts ? "todo" : "ok", t: "Taslaklar", d: drafts ? `${drafts} taslak kontrol bekliyor (sitede görünmüyorlar)` : "Bekleyen taslak yok", go: "#modeller" },
         { st: live.some((g) => g.video) ? "ok" : "opt", t: "Videolar", d: live.some((g) => g.video) ? `${live.filter((g) => g.video).length} modelin videosu var` : "İsteğe bağlı — hareket halindeki gelinlik en çok satan içerik", go: "#modeller" }
@@ -888,15 +950,16 @@
     dirty = false; lastHash = location.hash;
     if (!DB) { try { await reload(); } catch { view.innerHTML = `<p class="note">Veriler okunamadı. "Admin Paneli.bat" penceresinin açık olduğundan emin olun.</p>`; return; } }
     const h = decodeURIComponent(location.hash.slice(1)) || "modeller";
-    const tab = h.startsWith("model") || h.startsWith("yeni") ? "modeller" : h;
+    const tab = h.startsWith("model") || h.startsWith("yeni") || h === "hizli" ? "modeller" : h;
     $$(".side__nav a").forEach((a) => (a.dataset.tab === tab ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-    view.onclick = null; view.onchange = null;
+    view.onclick = null; view.onchange = null; view.oninput = null;
     if (h.startsWith("model=")) renderEditor(h.slice(6));
     else if (h.startsWith("yeni")) renderEditor(null, h.split("=")[1]);
     else if (h === "tasarimci") renderDesigner();
     else if (h === "yorumlar") renderReviews();
     else if (h === "ayarlar") renderSettings();
     else if (h === "instagram") renderInstagram();
+    else if (h === "hizli") renderQuick();
     else if (h === "yayinla") renderPublish();
     else renderList();
     view.focus({ preventScroll: true }); scrollTo(0, 0);

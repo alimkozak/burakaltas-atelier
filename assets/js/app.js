@@ -854,7 +854,20 @@
       s: pick("s", "silhouette"),
       n: pick("n", "neckline"),
       f: pick("f", "features"),
-      sort: ["featured", "low", "high"].includes(params.get("sort")) ? params.get("sort") : "featured"
+      sort: ["featured", "low", "high"].includes(params.get("sort")) ? params.get("sort") : "featured",
+      q: (params.get("q") || "").trim().slice(0, 40)
+    };
+    // Search by name, by code as seen on Instagram ("BA-104", "ba104", "104") or by words in the
+    // meaning / fabric — accents, İ/ı and case ignored
+    const norm = (s) => String(s || "").toLocaleLowerCase("tr").replace(/ı/g, "i").normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const hit = (g) => {
+      const q = norm(state.q).trim();
+      if (!q) return true;
+      const qc = q.replace(/[^a-z0-9]/g, "");
+      if (qc && /\d/.test(qc) && norm(g.no).replace(/[^a-z0-9]/g, "").includes(qc)) return true;
+      const hay = norm([g.name, g.no, g.meaning && g.meaning.en, g.meaning && g.meaning.tr, g.fabric && g.fabric.en, g.fabric && g.fabric.tr,
+        LABELS.silhouette[g.silhouette] && LABELS.silhouette[g.silhouette].en, LABELS.silhouette[g.silhouette] && LABELS.silhouette[g.silhouette].tr].join(" "));
+      return q.split(/\s+/).every((w) => hay.includes(w));
     };
     const avail = (field) => [...new Set(G.filter((g) => !state.c || g.collection === state.c).flatMap((g) => [].concat(g[field])))];
 
@@ -863,6 +876,7 @@
       if (state.c) p.set("c", state.c);
       ["s", "n", "f"].forEach((k) => state[k].length && p.set(k, state[k].join(",")));
       if (state.sort !== "featured") p.set("sort", state.sort);
+      if (state.q) p.set("q", state.q);
       if (new URLSearchParams(location.search).has("lang")) p.set("lang", lang);
       history.replaceState(null, "", "collection.html" + (p.toString() ? "?" + p : ""));
       syncNavCurrent();
@@ -871,7 +885,8 @@
       let l = G.filter((g) => (!state.c || g.collection === state.c)
         && (!state.s.length || state.s.includes(g.silhouette))
         && (!state.n.length || state.n.includes(g.neckline))
-        && (!state.f.length || state.f.every((f) => g.features.includes(f))));
+        && (!state.f.length || state.f.every((f) => g.features.includes(f)))
+        && hit(g));
       if (state.sort === "low") l = [...l].sort((a, b) => a.price - b.price);
       else if (state.sort === "high") l = [...l].sort((a, b) => b.price - a.price);
       else l = [...l].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
@@ -904,7 +919,7 @@
       showLabel();
     };
     const tags = () => {
-      const all = GROUPS.flatMap((gr) => state[gr.key].map((v) => ({ k: gr.key, v, l: L(LABELS[gr.field][v]) })));
+      const all = [...(state.q ? [{ k: "q", v: state.q, l: `“${state.q}”` }] : []), ...GROUPS.flatMap((gr) => state[gr.key].map((v) => ({ k: gr.key, v, l: L(LABELS[gr.field][v]) })))];
       $("#active-tags").innerHTML = all.map((a) => `<button type="button" data-rm="${a.k}:${esc(a.v)}" aria-label="${t("remove")} ${esc(a.l)}">${esc(a.l)}</button>`).join("")
         + (all.length ? `<button type="button" data-clear class="link" style="background:none">${t("clearAll")}</button>` : "");
       const n = all.length;
@@ -920,7 +935,12 @@
         : `<div class="grid-empty" style="grid-column:1/-1"><p class="display h3">${t("noMatch")}</p><p class="lede">${t("noMatchSub")}</p><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn btn--ghost" type="button" data-clear>${t("clearAll")}</button><a class="btn btn--wa" target="_blank" rel="noopener" href="${wa(t("waCustom"))}">${ICON.wa} ${t("askCustom")}</a></div></div>`;
       syncHearts(); observeReveals();
     };
-    const all = () => { head(); panel(); tags(); grid(); syncUrl(); };
+    const all = () => { head(); panel(); tags(); grid(); syncUrl(); recentRail($("#grid").parentElement); const qi = $("#q"); if (qi && qi.value !== state.q) qi.value = state.q; };
+    let qt;
+    document.addEventListener("input", (e) => {
+      if (e.target.id !== "q") return;
+      clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value.trim().slice(0, 40); tags(); grid(); syncUrl(); }, 150);
+    });
 
     document.addEventListener("change", (e) => {
       const cb = e.target.closest("[data-k]");
@@ -931,8 +951,8 @@
       const cb = e.target.closest("[data-coll]");
       if (cb) { state.c = cb.dataset.coll; state.s = []; state.n = []; state.f = []; all(); return; }
       const rm = e.target.closest("[data-rm]");
-      if (rm) { const [k, v] = rm.dataset.rm.split(":"); state[k] = state[k].filter((x) => x !== v); panel(); tags(); grid(); syncUrl(); return; }
-      if (e.target.closest("[data-clear]")) { state.s = []; state.n = []; state.f = []; panel(); tags(); grid(); syncUrl(); return; }
+      if (rm) { const [k, ...rest] = rm.dataset.rm.split(":"); const v = rest.join(":"); if (k === "q") { state.q = ""; $("#q").value = ""; } else state[k] = state[k].filter((x) => x !== v); panel(); tags(); grid(); syncUrl(); return; }
+      if (e.target.closest("[data-clear]")) { state.s = []; state.n = []; state.f = []; state.q = ""; const qi = $("#q"); if (qi) qi.value = ""; panel(); tags(); grid(); syncUrl(); return; }
       if (e.target.closest("[data-showres]")) {
         $("#fpanel").classList.remove("is-open"); $("#fbtn-filter").setAttribute("aria-expanded", "false");
         $("#grid").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -956,6 +976,7 @@
       });
       return;
     }
+    rememberGown(g);
     const col = C.find((c) => c.id === g.collection);
     const isMini = g.silhouette === "mini";
     // x = which price in SITE.extras applies to each choice (set in the admin panel)
@@ -1052,6 +1073,7 @@
         $("#gown-brides").innerHTML = brides.map(reviewCard).join("");
       }
       $("#tl").dataset.weeks = g.weeks.join(",");
+      recentRail($("#rail-more").closest("section"), g.id);
 
       // Mobile action bar
       let bar = $(".actbar");
@@ -1235,6 +1257,44 @@
   }
 
   /* ---------- Shortlist page ---------- */
+  /* ---------- "Recently viewed" — gowns this bride opened before (this browser only) ---------- */
+  const RECENT = "ba-recent";
+  const rememberGown = (g) => { if (g.draft) return; const ids = store.get(RECENT, []); store.set(RECENT, [g.id, ...(Array.isArray(ids) ? ids : []).filter((x) => typeof x === "string" && x !== g.id)].slice(0, 10)); };
+  function recentRail(after, exclude) {
+    if (!after) return;
+    const ids = store.get(RECENT, []);
+    const list = (Array.isArray(ids) ? ids : []).filter((id) => id !== exclude).map(byId).filter(Boolean).slice(0, 8);
+    let sec = $("#recent-sec");
+    if (list.length < 2) { if (sec) sec.remove(); return; }
+    if (!sec) { sec = document.createElement("section"); sec.id = "recent-sec"; sec.className = "section section--tight"; sec.setAttribute("aria-labelledby", "recent-title"); after.after(sec); }
+    const nav = (dir, icon, label) => `<button type="button" data-rail="rail-recent" data-dir="${dir}" aria-label="${L(label)}">${icon}</button>`;
+    sec.innerHTML = `
+      <div class="wrap flex-between" style="margin-bottom:36px">
+        <h2 class="display h3" id="recent-title">${t("recentTitle")}</h2>
+        <div class="rail-nav">${nav("prev", ICON.arrowL, { en: "Previous", tr: "Önceki" })}${nav("next", ICON.arrow, { en: "Next", tr: "Sonraki" })}</div>
+      </div>
+      <div class="rail" id="rail-recent" tabindex="0" role="region" aria-labelledby="recent-title">${list.map((g) => card(g)).join("")}</div>`;
+    syncHearts(); observeReveals();
+  }
+
+  /* ---------- Shortlist: compare side by side ---------- */
+  function compareTable(gowns) {
+    const rows = [
+      [t("cmpPrice"), (g) => (S.showPrices && g.price ? money(g.price) : "")],
+      [t("silhouette"), (g) => L(LABELS.silhouette[g.silhouette])],
+      [t("neckline"), (g) => L(LABELS.neckline[g.neckline])],
+      [t("details"), (g) => g.features.map((f) => L(LABELS.features[f])).join(" · ")],
+      [t("fabric"), (g) => esc(L(g.fabric))],
+      [t("leadTime"), (g) => t("weeksN", { a: g.weeks[0], b: g.weeks[1] })],
+      [t("handwork"), (g) => (g.hours ? t("hoursN", { n: g.hours }) : "")],
+      [t("onModel"), (g) => (g.model ? [g.model.height ? `${g.model.height} cm` : "", esc(g.model.size || "")].filter(Boolean).join(" · ") : "")]
+    ];
+    return `<div class="cmp__scroll" tabindex="0" role="region" aria-label="${t("compare")}"><table class="cmp__t">
+      <thead><tr><td></td>${gowns.map((g) => `<th scope="col"><a href="${gownUrl(g)}"><span class="cmp__img">${img(g.images[0], gownAlt(g, 0), { sizes: "160px", w: 400 })}</span><span class="cmp__name">${esc(g.name)}</span></a></th>`).join("")}</tr></thead>
+      <tbody>${rows.map(([label, f]) => `<tr><th scope="row">${label}</th>${gowns.map((g) => `<td>${f(g) || "—"}</td>`).join("")}</tr>`).join("")}</tbody>
+    </table></div>`;
+  }
+
   function renderShortlist() {
     const shared = (params.get("ids") || "").split(",").filter(byId);
     const ids = shared.length ? shared : shortlist.all();
@@ -1253,7 +1313,9 @@
         ${shared.length ? `<button class="btn" type="button" data-keep>${t("slKeep")}</button>` : `<button class="btn" type="button" data-sl-share>${ICON.share} ${t("slShare")}</button>`}
         <a class="btn btn--wa" target="_blank" rel="noopener" href="${wa(t("waShortlist", { list: names, url: link }))}">${ICON.wa} ${t("slAsk")}</a>
         <a class="btn btn--ghost" href="contact.html?ids=${ids.join(",")}">${t("enquire")}</a>
+        ${gowns.length > 1 ? `<button class="btn btn--ghost" type="button" data-sl-compare aria-expanded="false" aria-controls="sl-cmp">${t("compare")}</button>` : ""}
       </div>
+      <div class="cmp" id="sl-cmp" hidden></div>
       ${shared.length ? "" : `
       <div class="sl-save">
         <p><b>${t("slSaveTitle")}</b> ${t(/Instagram|FBAN|FBAV/.test(navigator.userAgent) ? "slSaveIg" : "slSaveText")}</p>
@@ -1266,6 +1328,13 @@
       <div class="grid" style="padding-top:0">${gowns.map((g) => card(g, { sizes: "(min-width: 900px) 25vw, 50vw" })).join("")}</div>`;
     box.onclick = async (e) => {
       if (e.target.closest("[data-sl-share]")) share({ title: t("slShareTitle"), text: t("slShareText"), url: link });
+      const cb = e.target.closest("[data-sl-compare]");
+      if (cb) {
+        const box = $("#sl-cmp"), open = box.hidden;
+        if (open && !box.innerHTML) box.innerHTML = compareTable(gowns);
+        box.hidden = !open; cb.setAttribute("aria-expanded", String(open)); cb.textContent = t(open ? "compareHide" : "compare");
+        if (open) box.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      }
       if (e.target.closest("[data-sl-copy]")) { try { await navigator.clipboard.writeText(link); toast(t("linkCopied")); } catch { prompt(t("slSelfCopy"), link); } }
       if (e.target.closest("[data-keep]")) { shortlist.add(shared); toast(t("savedAll")); }
     };

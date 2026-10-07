@@ -58,14 +58,14 @@ Bu, test ve küçük ekip için geçici bir çözümdür. Kalıcı çözüm, sun
 | Dosya | İçerik |
 |---|---|
 | `index.html` | Ana sayfa: hero, Yakamoz koleksiyonu, siluetler, uzaktan dikim süreci, "Yetişir mi?" hesaplayıcı, After Party, yorumlar, Instagram |
-| `collection.html` | Katalog: koleksiyon, siluet, yaka ve detay filtreleri, sıralama |
+| `collection.html` | Katalog: koleksiyon, siluet, yaka ve detay filtreleri, sıralama, **ad ya da kodla arama** (Instagram'da paylaşılan "BA-104" gibi kodlar; `collection.html?q=BA-104` linki de çalışır) ve **son baktıklarınız** şeridi |
 | `gown-<model>.html` | Model sayfaları (panel üretir): galeri, kişiselleştirme, Etsy ve WhatsApp butonları, takvim, kombin önerileri |
 | `designer.html` | Burak Altaş'ın tanıtım sayfası (panelden doldurulur) |
 | `atelier.html` | Atölye hikâyesi, malzemeler, uzaktan ölçü süreci, SSS |
 | `fitting.html` | **Online prova odası:** 3 randevu türü, gelinin kendi saat diliminde gün ve saat seçimi, ölçü görüşmesi için kadın / erkek / fark etmez tercihi, hazırlık listesi, **ölçü kartı** (aşağıda) |
 | `contact.html` | 3 adımlı talep formu (WhatsApp ya da e-posta ile gönderilir) |
 | `policies.html` | Gizlilik (KVKK & GDPR), sipariş, üretim, kargo, iade & tadilat. Her sayfanın altından bağlantı verilir. |
-| `shortlist.html` | Favoriler; "Ailemle paylaş" linki ve "kendime gönder" (WhatsApp / e-posta / link). Favoriler yalnızca o tarayıcıda saklandığı için gelin linki kendine gönderip başka cihazda listeyi geri açabilir. |
+| `shortlist.html` | Favoriler; "Ailemle paylaş" linki ve "kendime gönder" (WhatsApp / e-posta / link). Favoriler yalnızca o tarayıcıda saklandığı için gelin linki kendine gönderip başka cihazda listeyi geri açabilir. | Favoriler **yan yana karşılaştırılabilir** (fiyat, siluet, yaka, detaylar, kumaş, üretim süresi, el işçiliği, fotoğraftaki model).
 
 ## Online randevu sistemi
 Site şu an **kendi talep sistemiyle** çalışıyor:

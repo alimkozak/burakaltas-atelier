@@ -512,6 +512,8 @@ server.listen(PORT, HOST, () => {
     const tunnel = require("./tunnel.js");
     tunnel.startTunnel(PORT, (link) => {
       tunnel.copy(`Admin paneli: ${link}/admin\nŞifre: ${PASSWORD}`);
+      // also on disk, so the current link can be looked up later (e.g. sent from the phone)
+      try { fs.writeFileSync(path.join(ROOT, ".yedek", "uzak-link.txt"), `${link}/admin\n${new Date().toISOString()}\n`); } catch {}
       console.log(`
   ┌──────────────────────────────────────────────────────────────┐
      Burak'a gönderilecekler (ikisi birlikte panoya kopyalandı):

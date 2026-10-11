@@ -1118,8 +1118,8 @@ html.noir { background: #0e0c0a; }
 .cover, .duo, .closing { color: var(--ink); }
 .noir .hdr.is-scrolled { background: rgba(14, 12, 10, .86); }
 /* over the cover the header is always light, whatever the theme */
-body:is([data-page="home"], [data-page="atelier"]) .hdr:not(.is-scrolled) { color: #f1e9dd; }
-body:is([data-page="home"], [data-page="atelier"]) .hdr:not(.is-scrolled) .hdr__cta { --bg: #f1e9dd; --fg: #0e0c0a; --bd: #f1e9dd; }
+body:is([data-page="home"], [data-page="atelier"], [data-page="collection"]) .hdr:not(.is-scrolled) { color: #f1e9dd; }
+body:is([data-page="home"], [data-page="atelier"], [data-page="collection"]) .hdr:not(.is-scrolled) .hdr__cta { --bg: #f1e9dd; --fg: #0e0c0a; --bd: #f1e9dd; }
 
 /* Theme switch: a moon while light, a sun while dark */
 .theme-btn .i-sun, .noir .theme-btn .i-moon { display: none; }
@@ -1268,3 +1268,14 @@ body { font-variant-numeric: lining-nums; }
 /* ---------- Questions page ---------- */
 .faq { max-width: 980px; padding-bottom: clamp(64px, 9vw, 136px); }
 .faq__more { display: grid; gap: 22px; margin-top: clamp(40px, 6vw, 72px); }
+
+/* ---------- Collection page: banner per collection, calmer filter bar ---------- */
+.cover--band { min-height: min(62svh, 620px); }
+.cover--band .cover__panels img { object-position: 50% 22%; }
+.cover--band .cover__title { font-size: clamp(2.6rem, 5vw, 4.6rem); }
+.cover--band .cover__copy { padding-bottom: clamp(32px, 5vh, 56px); gap: 12px; }
+.filters__finder { margin-left: 8px; white-space: nowrap; flex: 0 0 auto; }
+.fpanel .fsearch { margin-bottom: 20px; width: min(100%, 360px); }
+.fpanel .fsearch input { width: 100%; }
+.coll-intro__img { max-width: 460px; width: 100%; justify-self: center; }
+.card__price:only-child { margin-top: 0; }

@@ -631,7 +631,7 @@
   }
   function card(g, { sizes = RAIL_SIZES, cls = "" } = {}) {
     const second = g.images[1] || g.images[0];
-    const price = S.showPrices && g.price ? `<p class="card__price">${t("from")} <b>${money(g.price)}</b>${fxHint(g.price)}</p>` : "";
+    const price = S.showPrices && g.price ? `<p class="card__price">${t("from")} <b>${money(g.price)}</b>${fxHint(g.price)}</p>` : `<p class="card__price">${t("priceAsk")}</p>`;
     return `
     <article class="card reveal ${cls}" data-cursor="view" data-vt="${g.id}">
       <div class="card__media"${g.video ? ` data-preview="${esc(at(g.video.src))}"` : ""}>
@@ -862,13 +862,14 @@
   }
   function pageHome() {
     initCover();
-    const featured = G.filter((g) => g.collection === "yakamoz" && g.featured);
-    const ap = G.filter((g) => g.collection === "afterparty");
+    // The looks strip shows the gowns starred (★) in the admin panel; with fewer than three it keeps the photos in the page
+    const featured = G.filter((g) => g.featured).slice(0, 5);
     onLang(() => {
-      const rail = $("#rail-featured");
-      if (rail) rail.innerHTML = featured.map((g) => card(g)).join("");
-      const rail2 = $("#rail-ap");
-      if (rail2) rail2.innerHTML = ap.map((g) => card(g)).join("");
+      const looks = $("#looks");
+      if (looks && featured.length >= 3) {
+        looks.innerHTML = featured.map((g) => `<a class="look reveal-img" href="${gownUrl(g)}" aria-label="${esc(g.name)}${meaningOf(g) ? " — " + esc(meaningOf(g)) : ""}">${img(g.images[0], gownAlt(g, 0), { sizes: "(min-width: 900px) 20vw, 72vw" })}</a>`).join("");
+        observeReveals();
+      }
       $$("[data-sil-count]").forEach((el) => { const n = G.filter((g) => g.silhouette === el.dataset.silCount).length; el.textContent = t(n === 1 ? "nGown" : "nGowns", { n }); });
       const rev = $("#reviews");
       if (rev) rev.innerHTML = R.map(reviewCard).join("");
@@ -937,10 +938,14 @@
       $("#coll-eyebrow").textContent = col ? col.season : t("theCollections");
       $("#coll-lede").textContent = col ? L(col.meaning) : t("collLede");
       document.title = `${col ? L(col.name) + " — " : ""}${t("collectionMeta")} | Burak Altaş Atelier`;
+      // Banner: the first photo of up to three gowns of this collection, starred ones first
+      const pool = G.filter((g) => !state.c || g.collection === state.c).sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      const picks = state.c ? pool.slice(0, 3) : [...C.map((c) => pool.find((g) => g.collection === c.id)), ...pool].filter((g, i, a) => g && a.indexOf(g) === i).slice(0, 3);
+      $("#coll-panels").innerHTML = picks.map((g, i) => `<div class="ph">${img(g.images[0], gownAlt(g, 0), { sizes: "(min-width: 900px) 34vw, 100vw", eager: true }).replace("<img ", `<img ${i === 0 ? 'class="is-on" ' : ""}`)}</div>`).join("");
       $$("[data-coll]").forEach((b) => { const on = b.dataset.coll === state.c; b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", String(on)); });
     };
     const panel = () => {
-      $("#fpanel").innerHTML = `<div class="fpanel__groups">${GROUPS.map((gr) => `
+      $("#fpanel-body").innerHTML = `<div class="fpanel__groups">${GROUPS.map((gr) => `
         <fieldset class="fpanel__group" style="border:0;padding:0;margin:0">
           <legend class="sr-only">${t(gr.label)}</legend><span aria-hidden="true">${t(gr.label)}</span>
           <div class="chips">${avail(gr.field).map((v) => `<label class="chip"><input type="checkbox" data-k="${gr.key}" value="${v}" ${state[gr.key].includes(v) ? "checked" : ""}><span>${L(LABELS[gr.field][v])}</span></label>`).join("")}</div>
@@ -962,7 +967,7 @@
         + (all.length ? `<button type="button" data-clear class="link" style="background:none">${t("clearAll")}</button>` : "");
       const n = all.length;
       $("#fbtn-filter").classList.toggle("is-active", n > 0);
-      $("#fbtn-filter span").textContent = n ? `${t("filter")} (${n})` : t("filter");
+      $("#fbtn-filter span").textContent = n ? `${t("filterSearch")} (${n})` : t("filterSearch");
     };
     const tagsText = () => [state.q, ...GROUPS.flatMap((gr) => state[gr.key].map((v) => L(LABELS[gr.field][v])))].filter(Boolean).join(" · ");
     const showLabel = () => { const b = $("[data-showres]"); if (b) { const n = list().length; b.textContent = n === 1 ? t("showN1") : t("showN", { n }); } };
@@ -1076,7 +1081,7 @@
             ${g.draft ? `<p class="gown__concept"><b>Taslak önizleme</b> Bu model sitede henüz görünmüyor; panelde "Taslak" kutusunu kaldırınca yayına girer.</p>` : ""}
             ${g.concept ? `<p class="gown__concept"><b>${t("conceptTag")}</b> ${t("conceptNote")}</p>` : ""}
           </div>
-          ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")} ${t("buyTerms")}</p></div>` : ""}
+          ${S.showPrices && g.price ? `<div><p class="gown__price" id="gown-price" aria-live="polite">${priceHtml()}</p><p class="small mt-s">${t("currencyNote")} ${t("buyTerms")}</p></div>` : `<p class="gown__price">${t("priceAsk")}</p>`}
           <p class="gown__story">${esc(L(g.story))}</p>
           <dl class="specs">
             <dt>${t("silhouette")}</dt><dd>${L(LABELS.silhouette[g.silhouette])}</dd>
@@ -1164,7 +1169,7 @@
         "@context": "https://schema.org", "@type": "Product", name: `${g.name} wedding dress`, sku: g.no,
         image: g.images.map((id) => src(id, 1400)), description: g.story.en, material: g.fabric.en, color: "Ivory",
         brand: { "@type": "Brand", name: "Burak Altaş Atelier" },
-        offers: { "@type": "Offer", price: g.price, priceCurrency: S.currency, availability: "https://schema.org/PreOrder", url: etsyFor(g) },
+        ...(g.price ? { offers: { "@type": "Offer", price: g.price, priceCurrency: S.currency, availability: "https://schema.org/PreOrder", url: etsyFor(g) } } : {}),
         ...(g.video ? { subjectOf: { "@type": "VideoObject", name: `${g.name} — Burak Altaş Atelier`, description: g.story.en || g.story.tr, thumbnailUrl: absUrl(src(g.video.poster, 1400)), contentUrl: absUrl(g.video.src), uploadDate: g.video.date } } : {})
       });
     }

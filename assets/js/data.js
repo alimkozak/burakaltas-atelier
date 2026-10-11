@@ -37,6 +37,234 @@ window.COLLECTIONS = [
 
 window.GOWNS = [
   {
+    "id": "model-301",
+    "no": "BA-301",
+    "name": "Model 301",
+    "collection": "yakamoz",
+    "meaning": {
+      "en": "pearl-fringe draped gown",
+      "tr": "inci saçaklı drapeli gelinlik"
+    },
+    "silhouette": "column",
+    "neckline": "offshoulder",
+    "features": [
+      "pearls",
+      "corset",
+      "slit",
+      "train",
+      "beading"
+    ],
+    "fabric": {
+      "en": "Draped satin, pearl fringe",
+      "tr": "Drapeli saten, inci saçak"
+    },
+    "hours": 0,
+    "price": 0,
+    "weeks": [
+      8,
+      12
+    ],
+    "etsy": "",
+    "ig": "DX30tEoDsz-",
+    "images": [
+      "assets/img/uploads/model-301-1.jpg",
+      "assets/img/uploads/model-301-2.jpg",
+      "assets/img/uploads/model-301-3.jpg"
+    ],
+    "story": {
+      "en": "A draped satin gown with a pearl-covered corset, strands of pearl fringe at the shoulders and a high slit.",
+      "tr": "İncilerle kaplı korsesi, omuzlardan dökülen inci saçakları ve derin yırtmacıyla drapeli saten bir gelinlik."
+    },
+    "featured": true
+  },
+  {
+    "id": "model-302",
+    "no": "BA-302",
+    "name": "Model 302",
+    "collection": "yakamoz",
+    "meaning": {
+      "en": "flower-corset ball gown",
+      "tr": "çiçek aplikeli korse prenses gelinlik"
+    },
+    "silhouette": "ballgown",
+    "neckline": "sweetheart",
+    "features": [
+      "corset",
+      "lace",
+      "train",
+      "beading"
+    ],
+    "fabric": {
+      "en": "Lace, tulle, flower appliqués",
+      "tr": "Dantel, tül, çiçek aplike"
+    },
+    "hours": 0,
+    "price": 0,
+    "weeks": [
+      8,
+      12
+    ],
+    "etsy": "",
+    "ig": "DXmX53qjJwK",
+    "images": [
+      "assets/img/uploads/model-302-1.jpg",
+      "assets/img/uploads/model-302-2.jpg"
+    ],
+    "story": {
+      "en": "A lace corset with flower appliqués on the straps, over a full tulle skirt that catches the light.",
+      "tr": "Askılarında çiçek aplikeleri olan dantel korse ve ışığı yakalayan kabarık tül etek."
+    },
+    "featured": true
+  },
+  {
+    "id": "model-303",
+    "no": "BA-303",
+    "name": "Model 303",
+    "collection": "yakamoz",
+    "meaning": {
+      "en": "long-sleeved lace gown",
+      "tr": "uzun kollu dantel gelinlik"
+    },
+    "silhouette": "aline",
+    "neckline": "square",
+    "features": [
+      "lace",
+      "sleeves",
+      "pearls",
+      "corset"
+    ],
+    "fabric": {
+      "en": "Lace, tulle, pearl strands",
+      "tr": "Dantel, tül, inci dizileri"
+    },
+    "hours": 0,
+    "price": 0,
+    "weeks": [
+      8,
+      12
+    ],
+    "etsy": "",
+    "ig": "DU46_zXjA0V",
+    "images": [
+      "assets/img/uploads/model-303-1.jpg"
+    ],
+    "story": {
+      "en": "Long lace sleeves, a square neckline hung with pearl strands and a matching lace choker, over a soft tulle skirt.",
+      "tr": "Uzun dantel kollar, inci dizileriyle süslü kare yaka ve uyumlu dantel tasma; altında yumuşak tül etek."
+    },
+    "featured": true
+  },
+  {
+    "id": "model-304",
+    "no": "AP-301",
+    "name": "Model 304",
+    "collection": "afterparty",
+    "meaning": {
+      "en": "rosette corset mini",
+      "tr": "rozet etekli korse mini"
+    },
+    "silhouette": "mini",
+    "neckline": "sweetheart",
+    "features": [
+      "corset"
+    ],
+    "fabric": {
+      "en": "Corset bodice, fabric rosettes",
+      "tr": "Korse üst, kumaş rozetler"
+    },
+    "hours": 0,
+    "price": 0,
+    "weeks": [
+      4,
+      6
+    ],
+    "etsy": "",
+    "ig": "DVDnOR5DE3X",
+    "images": [
+      "assets/img/uploads/model-304-1.jpg",
+      "assets/img/uploads/model-304-2.jpg"
+    ],
+    "story": {
+      "en": "A structured corset over a short skirt of oversized fabric rosettes.",
+      "tr": "İri kumaş rozetlerden kısa bir etek üzerinde yapılı bir korse."
+    },
+    "featured": true
+  },
+  {
+    "id": "model-305",
+    "no": "AP-302",
+    "name": "Model 305",
+    "collection": "afterparty",
+    "meaning": {
+      "en": "pearl-fringe corset mini",
+      "tr": "inci saçaklı korse mini"
+    },
+    "silhouette": "mini",
+    "neckline": "sweetheart",
+    "features": [
+      "pearls",
+      "corset",
+      "lace",
+      "beading"
+    ],
+    "fabric": {
+      "en": "Boned corset, lace, pearl fringe",
+      "tr": "Balenli korse, dantel, inci saçak"
+    },
+    "hours": 0,
+    "price": 0,
+    "weeks": [
+      4,
+      6
+    ],
+    "etsy": "",
+    "ig": "DXZ1b-wDrjR",
+    "images": [
+      "assets/img/uploads/model-305-1.jpg"
+    ],
+    "story": {
+      "en": "A boned corset with lace cups, pearl strands at the shoulders and a skirt covered in pearl fringe.",
+      "tr": "Dantel kaplı balenli korse, omuzlarda inci dizileri ve inci saçaklarla kaplı etek."
+    },
+    "featured": true
+  },
+  {
+    "id": "model-306",
+    "no": "AP-303",
+    "name": "Model 306",
+    "collection": "afterparty",
+    "meaning": {
+      "en": "tulle-cape corset mini",
+      "tr": "tül pelerinli korse mini"
+    },
+    "silhouette": "mini",
+    "neckline": "strapless",
+    "features": [
+      "pearls",
+      "corset",
+      "detachable"
+    ],
+    "fabric": {
+      "en": "Draped tulle, pearls",
+      "tr": "Drapeli tül, inci"
+    },
+    "hours": 0,
+    "price": 0,
+    "weeks": [
+      4,
+      6
+    ],
+    "etsy": "",
+    "ig": "Daz6tjLCBTo",
+    "images": [
+      "assets/img/uploads/model-306-1.jpg"
+    ],
+    "story": {
+      "en": "A draped corset mini with pearl details and a floor-length tulle cape that falls from the arms.",
+      "tr": "İnci detaylı drapeli korse mini; kollardan yere kadar inen tül pelerinle."
+    }
+  },
+  {
     "id": "yakamoz",
     "no": "BA-101",
     "name": "Yakamoz",
@@ -73,7 +301,7 @@ window.GOWNS = [
       "en": "The atelier's signature. A boned corset sculpts the waist, two thousand pearls are hand-sewn one by one, and the skirt moves like moonlight on water.",
       "tr": "Atölyenin imza modeli. Balenli korse beli inceltir, iki bin incinin her biri elde dikilir; etek, yürürken denizin ışığı gibi kıpırdar."
     },
-    "featured": true
+    "draft": true
   },
   {
     "id": "sedef",
@@ -111,7 +339,7 @@ window.GOWNS = [
       "en": "A mermaid line that follows the body like a second skin. The open back closes with forty-two covered buttons.",
       "tr": "Vücudu ikinci bir ten gibi saran balık kesim. Açık sırt, kırk iki kaplı düğmeyle kapanır."
     },
-    "featured": true
+    "draft": true
   },
   {
     "id": "mehtap",
@@ -147,7 +375,7 @@ window.GOWNS = [
       "en": "A skirt that talks to the wind. Light yet grand — made for seaside, vineyard and open-air weddings.",
       "tr": "Rüzgârla konuşan bir etek. Sahil, bağ ve açık hava düğünleri için hafif ama görkemli."
     },
-    "featured": true
+    "draft": true
   },
   {
     "id": "efsun",
@@ -182,7 +410,8 @@ window.GOWNS = [
     "story": {
       "en": "A cloud of twelve tulle layers with a soft off-shoulder line. Designed for grand staircase entrances.",
       "tr": "On iki kat tülden oluşan bulut etek ve omuz açık yaka. Merdiven inişleri için tasarlandı."
-    }
+    },
+    "draft": true
   },
   {
     "id": "nilufer",
@@ -219,7 +448,7 @@ window.GOWNS = [
       "en": "Two gowns in one: a lace overskirt with train for the ceremony, removed at night to reveal a sleek mermaid.",
       "tr": "İki gelinlik bir arada: tören için kuyruklu dantel etek, gece için çıkarılınca sade bir balık kesim."
     },
-    "featured": true
+    "draft": true
   },
   {
     "id": "lal",
@@ -253,7 +482,8 @@ window.GOWNS = [
     "story": {
       "en": "No ornament — only a flawless cut. Modern minimalism for civil ceremonies and city weddings.",
       "tr": "Hiç süs yok; yalnızca kusursuz kesim. Nikâh ve şehir düğünleri için modern minimalizm."
-    }
+    },
+    "draft": true
   },
   {
     "id": "inci",
@@ -291,7 +521,7 @@ window.GOWNS = [
       "en": "Long lace sleeves with pearl buttons to the wrist. Covered yet breathtaking — ideal for religious ceremonies.",
       "tr": "Uzun dantel kollar, bileğe kadar inci düğmeler. Kilise ve cami nikâhlarına uygun kapalı ama nefes kesen bir model."
     },
-    "featured": true
+    "draft": true
   },
   {
     "id": "sebnem",
@@ -326,7 +556,8 @@ window.GOWNS = [
     "story": {
       "en": "As pure as morning dew. Designed together with its cathedral-length veil.",
       "tr": "Sabah çiyi kadar sade. Katedral boy duvakla birlikte tasarlandı."
-    }
+    },
+    "draft": true
   },
   {
     "id": "nazende",
@@ -362,7 +593,8 @@ window.GOWNS = [
     "story": {
       "en": "Three-dimensional flowers, each cut by hand, are scattered over the skirt — arranged anew for every bride.",
       "tr": "Tek tek elde kesilen üç boyutlu çiçekler eteğe serpiştirilir; her gelin için yerleşim yeniden yapılır."
-    }
+    },
+    "draft": true
   },
   {
     "id": "gulizar",
@@ -398,7 +630,8 @@ window.GOWNS = [
     "story": {
       "en": "Romantic, classic and timeless — like an heirloom from your mother's chest, cut for today.",
       "tr": "Romantik, klasik ve zamansız. Annenizin sandığından çıkmış gibi, ama bugüne göre kesilmiş."
-    }
+    },
+    "draft": true
   },
   {
     "id": "peri",
@@ -434,7 +667,8 @@ window.GOWNS = [
     "story": {
       "en": "Lace placed on sheer tulle across the back, as if embroidered directly onto the skin.",
       "tr": "Sırtta tül üzerine işlenmiş dantel, sanki tene işlenmiş gibi görünür."
-    }
+    },
+    "draft": true
   },
   {
     "id": "gece",
@@ -470,7 +704,8 @@ window.GOWNS = [
     "story": {
       "en": "For brides who want an entrance: sculptural duchess satin and over-the-elbow opera gloves.",
       "tr": "Dramatik bir giriş isteyen gelinler için: heykel gibi duran saten ve dirseği geçen opera eldivenleri."
-    }
+    },
+    "draft": true
   },
   {
     "id": "kugu",
@@ -508,7 +743,7 @@ window.GOWNS = [
       "en": "The atelier's most labour-intensive gown. Every feather is placed by hand and moves softly with each step.",
       "tr": "Atölyenin en çok emek isteyen modeli. Tüyler tek tek elle yerleştirilir; her adımda hafifçe dalgalanır."
     },
-    "featured": true
+    "draft": true
   },
   {
     "id": "hare",
@@ -544,7 +779,8 @@ window.GOWNS = [
     "story": {
       "en": "Embroidery that shifts with the light, on a mermaid line finished with a feathered hem.",
       "tr": "Işıkla birlikte renk değiştiren işleme, eteğin ucunda tüylerle biten bir balık kesim."
-    }
+    },
+    "draft": true
   },
   {
     "id": "lodos",
@@ -581,7 +817,7 @@ window.GOWNS = [
       "en": "The star of the second half of the night, embroidered with the same pearls as your gown — two looks, one story.",
       "tr": "Gecenin ikinci yarısının yıldızı. Gelinlikle aynı incilerle işlenir; iki görünüm, tek hikâye."
     },
-    "featured": true
+    "draft": true
   },
   {
     "id": "poyraz",
@@ -614,7 +850,8 @@ window.GOWNS = [
     "story": {
       "en": "Halter neck, open back — born to dance.",
       "tr": "Boyundan bağlı, sırtı açık, dans etmek için doğmuş."
-    }
+    },
+    "draft": true
   },
   {
     "id": "isil",
@@ -648,7 +885,8 @@ window.GOWNS = [
     "story": {
       "en": "Off-shoulder corset and tiers of feathers — for henna night, engagement and after party.",
       "tr": "Omuz açık korse ve kat kat tüy. Kına, nişan ve after party için."
-    }
+    },
+    "draft": true
   },
   {
     "id": "nisan",
@@ -681,7 +919,8 @@ window.GOWNS = [
     "story": {
       "en": "Clean and sharp — for a civil ceremony morning, a brunch or a city wedding.",
       "tr": "Nikâh sabahı, brunch ya da şehir düğünü için sade ve keskin."
-    }
+    },
+    "draft": true
   },
   {
     "id": "melek",
@@ -715,7 +954,8 @@ window.GOWNS = [
     "story": {
       "en": "Feather sleeves and a sweetheart line that look like wings in every photograph.",
       "tr": "Tüy kollar ve kalp yaka; fotoğraflarda kanat gibi görünür."
-    }
+    },
+    "draft": true
   },
   {
     "id": "sahil",
@@ -748,7 +988,8 @@ window.GOWNS = [
     "story": {
       "en": "Light, easy and timeless — for beach weddings and the honeymoon.",
       "tr": "Plaj düğünleri ve balayı için hafif, rahat, zamansız."
-    }
+    },
+    "draft": true
   }
 ];
 

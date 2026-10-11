@@ -108,7 +108,7 @@ function build({ dist = false } = {}) {
       "@context": "https://schema.org", "@type": "Product", name: `${g.name} ${kind}`, sku: g.no,
       image: (g.images || []).map((id) => imgUrl(id, 1400)), description: story, material: fabric, inLanguage: lang,
       brand: { "@type": "Brand", name: "Burak Altaş Atelier" },
-      offers: { "@type": "Offer", price: g.price, priceCurrency: S.currency, availability: "https://schema.org/PreOrder", url: g.etsy || S.etsyShop },
+      ...(g.price ? { offers: { "@type": "Offer", price: g.price, priceCurrency: S.currency, availability: "https://schema.org/PreOrder", url: g.etsy || S.etsyShop } } : {}),
       // Lets Google show the clip in video results and on the product listing
       ...(g.video ? { subjectOf: {
         "@type": "VideoObject", name: `${g.name} — Burak Altaş Atelier`, description: story || g.name,

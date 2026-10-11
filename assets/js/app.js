@@ -838,8 +838,8 @@
 
   /* ---------- Home ---------- */
   function pageHome() {
-    // Hero slideshow inside the arch
-    const heroImgs = $$(".hero__img img");
+    // Cover slideshow (phones show one panel at a time; desktop shows all three)
+    const heroImgs = $$(".cover__panels img");
     if (heroImgs.length > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       let i = 0;
       setInterval(() => { heroImgs[i].classList.remove("is-on"); i = (i + 1) % heroImgs.length; heroImgs[i].classList.add("is-on"); }, 6000);

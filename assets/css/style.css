@@ -1104,3 +1104,87 @@ html[lang="tr"] .hide-tr { display: none; }
   .cmp__t th, .cmp__t td { min-width: 128px; padding: 10px 10px; font-size: .86rem; }
   .cmp__t tbody th { min-width: 0; width: 70px; max-width: 70px; padding: 10px 6px; font-size: .58rem; letter-spacing: .1em; overflow-wrap: anywhere; }
 }
+
+/* ==========================================================================
+   Noir theme + home page v2 (glam couture direction)
+   Palette taken from the atelier's campaign photographs: espresso, stone, champagne.
+   Opt-in per page with <body class="noir"> until every page is redesigned.
+   ========================================================================== */
+html:has(body.noir) { background: #0e0c0a; }
+.noir {
+  --ivory: #0e0c0a; --paper: #14110e; --sand: #1b1713; --blush: #241d18;
+  --ink: #f1e9dd; --ink-2: #cfc4b5; --mute: #a39685;
+  --gold: #c9a877; --gold-deep: #a9854f;
+  --night: #080706; --night-2: #14110e;
+  --line: rgba(241, 233, 221, .16);
+  color-scheme: dark;
+}
+.noir .hdr.is-scrolled { background: rgba(14, 12, 10, .86); }
+.noir .shimmer { color: var(--ink); }
+
+/* Wordmark as the atelier writes it: wide-set capitals over a small "ATELIER" */
+.noir .logo__mono { display: none; }
+.noir .logo__word { font-family: var(--serif); font-size: clamp(13px, 3.7vw, 17px); font-weight: 400; letter-spacing: .3em; margin-right: -.3em; white-space: nowrap; }
+.noir .logo::after { content: "Atelier"; font-size: 8px; font-weight: 500; letter-spacing: .52em; margin-right: -.52em; text-transform: uppercase; opacity: .7; margin-top: 6px; }
+.noir .ftr .logo::after { content: none; }
+
+/* ---------- Cover: three campaign panels, one on phones ---------- */
+.cover { position: relative; min-height: 100svh; display: grid; align-items: end; overflow: hidden; background: var(--night); }
+.cover__panels { position: absolute; inset: 0; display: grid; }
+/* stacked on phones, so the panels themselves stay see-through */
+.cover__panels .ph { grid-area: 1 / 1; background: transparent; }
+.cover__panels img { position: absolute; inset: 0; object-position: 50% 18%; opacity: 0; transition: opacity 1.8s var(--ease-in-out); }
+.cover__panels img.is-on { opacity: 1; }
+.cover::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, rgba(8, 7, 6, .96) 0%, rgba(8, 7, 6, .8) 30%, rgba(8, 7, 6, 0) 64%), linear-gradient(to bottom, rgba(8, 7, 6, .6), rgba(8, 7, 6, 0) 22%);
+}
+.cover__copy { position: relative; z-index: 1; display: grid; gap: 18px; justify-items: center; text-align: center; padding-top: calc(var(--hdr-h) + 40px); padding-bottom: clamp(88px, 9vh, 96px); }
+.cover__title { font-size: clamp(2.3rem, 4.8vw, 4.6rem); line-height: 1.02; max-width: 15em; text-wrap: balance; }
+.cover__copy .lede { color: rgba(241, 233, 221, .86); max-width: 33em; text-wrap: balance; }
+.cover__ctas { display: flex; flex-wrap: wrap; gap: 16px 30px; align-items: center; justify-content: center; margin-top: 8px; }
+@media (min-width: 900px) {
+  .cover__panels { grid-template-columns: repeat(3, 1fr); gap: 2px; }
+  .cover__panels .ph { grid-area: auto; }
+  .cover__panels .ph:first-child { order: 2; }
+  .cover__panels .ph:nth-child(2) { order: 1; }
+  .cover__panels .ph:nth-child(3) { order: 3; }
+  .cover__panels img { opacity: 1; }
+  .cover__copy { padding-bottom: clamp(48px, 8vh, 88px); }
+  .cover::after { background: linear-gradient(to top, rgba(8, 7, 6, .94) 0%, rgba(8, 7, 6, .6) 26%, rgba(8, 7, 6, 0) 56%), linear-gradient(to bottom, rgba(8, 7, 6, .6), rgba(8, 7, 6, 0) 22%); }
+}
+
+/* ---------- Looks: an unbroken strip of campaign images ---------- */
+.looks { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 72vw); gap: 4px; overflow-x: auto; scroll-snap-type: x mandatory; padding-inline: var(--gutter); scroll-padding-inline: var(--gutter); scrollbar-width: none; }
+.looks::-webkit-scrollbar { display: none; }
+.look { position: relative; aspect-ratio: 3 / 4.3; overflow: hidden; scroll-snap-align: start; background: var(--sand); }
+.look img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+@media (hover: hover) { .look.in img { transition: transform 1.6s var(--ease); } .look.in:hover img { transform: scale(1.04); } }
+@media (min-width: 900px) { .looks { grid-auto-columns: 1fr; overflow: visible; padding-inline: 0; } }
+
+/* ---------- Process steps side by side ---------- */
+@media (min-width: 960px) {
+  .steps--row { grid-template-columns: repeat(4, 1fr); gap: 0 clamp(20px, 2.6vw, 44px); }
+  .steps--row .step { grid-template-columns: 1fr; align-content: start; gap: 14px; border-bottom: 0; }
+  .steps--row .step p, .steps--row .step__tag { grid-column: 1; }
+  .steps--row .step h3 { font-size: clamp(1.4rem, 1.9vw, 1.8rem); }
+}
+
+/* ---------- Duo: two images with the copy laid over them ---------- */
+.duo { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--night); }
+.duo .ph { aspect-ratio: 3 / 4; background: var(--night); }
+.duo .ph img { object-position: 50% 30%; }
+.duo__copy { grid-column: 1 / -1; display: grid; gap: 18px; justify-items: center; text-align: center; padding: 48px var(--gutter) 64px; }
+@media (min-width: 900px) {
+  .duo .ph { aspect-ratio: auto; height: min(94svh, 900px); }
+  .duo__copy { position: absolute; inset: auto 0 0; z-index: 1; padding: 160px var(--gutter) clamp(40px, 6vh, 72px); background: linear-gradient(to top, rgba(8, 7, 6, .92), rgba(8, 7, 6, .5) 45%, rgba(8, 7, 6, 0)); }
+  .duo__copy .lede { color: rgba(241, 233, 221, .86); }
+}
+
+/* ---------- Closing call to action over a dimmed campaign image ---------- */
+.closing { overflow: hidden; background: var(--night); }
+.closing__bg { position: absolute; inset: 0; }
+.closing__bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; opacity: .34; }
+.closing__bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(8, 7, 6, .35), rgba(8, 7, 6, .9)); }
+.closing .wrap { position: relative; z-index: 1; }
+.closing__note { max-width: 34em; opacity: .8; }

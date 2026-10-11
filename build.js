@@ -154,7 +154,7 @@ function build({ dist = false } = {}) {
   };
   const gownHtml = (g, lang) => template
     .replace(/<title>[\s\S]*?<\/title>\s*<meta name="description"[^>]*>/, gownHead(g, lang))
-    .replace('<body data-page="gown">', `<body data-page="gown" data-gown="${g.id}">`);
+    .replace('<body data-page="gown"', `<body data-page="gown" data-gown="${g.id}"`);
 
   for (const g of G) {
     const file = `gown-${g.id}.html`;

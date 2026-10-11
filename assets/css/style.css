@@ -1118,8 +1118,8 @@ html.noir { background: #0e0c0a; }
 .cover, .duo, .closing { color: var(--ink); }
 .noir .hdr.is-scrolled { background: rgba(14, 12, 10, .86); }
 /* over the cover the header is always light, whatever the theme */
-body[data-page="home"] .hdr:not(.is-scrolled) { color: #f1e9dd; }
-body[data-page="home"] .hdr:not(.is-scrolled) .hdr__cta { --bg: #f1e9dd; --fg: #0e0c0a; --bd: #f1e9dd; }
+body:is([data-page="home"], [data-page="atelier"]) .hdr:not(.is-scrolled) { color: #f1e9dd; }
+body:is([data-page="home"], [data-page="atelier"]) .hdr:not(.is-scrolled) .hdr__cta { --bg: #f1e9dd; --fg: #0e0c0a; --bd: #f1e9dd; }
 
 /* Theme switch: a moon while light, a sun while dark */
 .theme-btn .i-sun, .noir .theme-btn .i-moon { display: none; }
@@ -1241,3 +1241,30 @@ body[data-page="home"] .hdr:not(.is-scrolled) .hdr__cta { --bg: #f1e9dd; --fg: #
 .cover__title { font-size: clamp(2.7rem, 5.4vw, 5.2rem); line-height: 1; }
 /* Cormorant's default figures are old-style (they sit low like lowercase); prices and step numbers need lining figures */
 body { font-variant-numeric: lining-nums; }
+
+/* ---------- Type scale, round 3: headings at about 60% of before; the home cover keeps the one large line ---------- */
+.h1, .page-head .h1 { font-size: clamp(2.5rem, 5.2vw, 4.8rem); line-height: 1; }
+.h2 { font-size: clamp(2rem, 3.9vw, 3.6rem); line-height: 1.04; }
+.h3 { font-size: clamp(1.6rem, 2.5vw, 2.3rem); line-height: 1.08; }
+.h2 em, .h3 em { font-style: normal; }
+.define__word { font-size: clamp(2.6rem, 4.8vw, 4.4rem); }
+.define__text { font-size: clamp(1.25rem, 1.9vw, 1.6rem); }
+.gown__name { font-size: clamp(2.6rem, 4.4vw, 4rem); line-height: .95; }
+.quote-xl { font-size: clamp(1.6rem, 2.8vw, 2.6rem); }
+.review blockquote { font-size: clamp(1.25rem, 1.8vw, 1.6rem); }
+.cta-final .h2 { max-width: 16em; }
+.section { padding-block: clamp(64px, 9vw, 136px); }
+.section--tight { padding-block: clamp(48px, 6vw, 88px); }
+.section-head { margin-bottom: clamp(32px, 4.5vw, 60px); }
+
+/* ---------- Atelier (story) page ---------- */
+.cover--page { min-height: min(86svh, 860px); }
+.cover--page .cover__panels img { object-position: 50% 30%; }
+.cover--page::after { background: linear-gradient(to top, rgba(8, 7, 6, .94) 0%, rgba(8, 7, 6, .7) 30%, rgba(8, 7, 6, .15) 70%), linear-gradient(to bottom, rgba(8, 7, 6, .65), rgba(8, 7, 6, 0) 24%); }
+.split--solo { grid-template-columns: minmax(0, 46rem); }
+.ds-wide { aspect-ratio: 16 / 9; margin-top: clamp(40px, 6vw, 80px); }
+.ds-portrait { width: 100%; }
+
+/* ---------- Questions page ---------- */
+.faq { max-width: 980px; padding-bottom: clamp(64px, 9vw, 136px); }
+.faq__more { display: grid; gap: 22px; margin-top: clamp(40px, 6vw, 72px); }

@@ -36,7 +36,7 @@ window.I18N = {
     ourStory: { en: "Our story", tr: "Hikâyemiz" },
     howRemote: { en: "Remote fitting", tr: "Uzaktan ölçülü dikim" },
     measureGuide: { en: "Measurement card", tr: "Ölçü kartı" },
-    faq: { en: "FAQ", tr: "Sık sorulanlar" },
+    faq: { en: "Questions", tr: "Sık sorulanlar" },
     visit: { en: "Visit & contact", tr: "Ziyaret & iletişim" },
     madeIn: { en: "Hand-made in İzmir, Türkiye", tr: "İzmir'de el yapımı" },
     etsyNote: { en: "Orders are placed through our online stores (Etsy, Trendyol and others).", tr: "Siparişler online mağazalarımız (Etsy, Trendyol ve diğerleri) üzerinden verilir." },
@@ -187,8 +187,8 @@ window.I18N = {
     },
     accShip: { en: "Timing, shipping & duties", tr: "Süre, kargo & gümrük" },
     accShipBody: {
-      en: "<p>Made in {a}–{b} weeks, then sent to you through the store you ordered from — its page shows the shipping options and delivery times for your country.</p><p>Import duties and taxes depend on your country and are paid on delivery. See the <a href='atelier.html#faq' style='text-decoration:underline'>FAQ</a> or ask us.</p>",
-      tr: "<p>{a}–{b} haftada dikilir, ardından sipariş verdiğiniz mağaza üzerinden size gönderilir — ülkenize kargo seçenekleri ve süreleri mağazanın sayfasında yazar.</p><p>Gümrük vergisi ve harçlar ülkenize göre değişir ve teslimatta ödenir. <a href='atelier.html#faq' style='text-decoration:underline'>Sık sorulanlara</a> bakın ya da bize yazın.</p>"
+      en: "<p>Made in {a}–{b} weeks, then sent to you through the store you ordered from — its page shows the shipping options and delivery times for your country.</p><p>Import duties and taxes depend on your country and are paid on delivery. See the <a href='faq.html#faq' style='text-decoration:underline'>FAQ</a> or ask us.</p>",
+      tr: "<p>{a}–{b} haftada dikilir, ardından sipariş verdiğiniz mağaza üzerinden size gönderilir — ülkenize kargo seçenekleri ve süreleri mağazanın sayfasında yazar.</p><p>Gümrük vergisi ve harçlar ülkenize göre değişir ve teslimatta ödenir. <a href='faq.html#faq' style='text-decoration:underline'>Sık sorulanlara</a> bakın ya da bize yazın.</p>"
     },
     accCare: { en: "Care & packaging", tr: "Bakım & paketleme" },
     accCareBody: {
@@ -267,7 +267,8 @@ window.I18N = {
 
   tr: {
     "meta.home": "Burak Altaş Atelier — İzmir'de ölçüye özel couture gelinlikler",
-    "meta.atelier": "Atölye & uzaktan ölçülü dikim — Burak Altaş Atelier",
+    "meta.atelier": "Konak, İzmir'deki atölye — Burak Altaş Atelier",
+    "meta.faq": "Gelinlerin sorduğu sorular — Burak Altaş Atelier",
     "meta.contact": "İletişim & bilgi talebi — Burak Altaş Atelier",
     skip: "İçeriğe geç",
     "hero.h": "Ölçünüze göre dikilen <em>couture gelinlikler</em>",
@@ -347,9 +348,11 @@ window.I18N = {
     "at.p1": "Atölyemiz Konak, İzmir'de — Avrupa'nın en büyük gelinlik fuarlarından birine ev sahipliği yapan ve kuşaklardır gelin giydiren şehirde. Burada her gelinlik, yalnızca bir kadın için çizilen bir kalıpla başlar.",
     "at.p2": "Bilerek yavaş çalışıyoruz: korseler elde balenlenir, inciler tek tek dikilir, tüyler tam istediğimiz gibi dalgalanana kadar yerleştirilir. Sonra bitmiş gelinliği, onu giyeceğiniz yere — dünyanın neresi olursa — göndeririz.",
     "at.visit": "Showroom'u ziyaret edin",
+    "at.h2": "Konak, İzmir'de bir atölye",
+    "at.faq": "Gelinlerin sorduğu soruları okuyun",
     "mat.title": "<em>Malzemeler</em>",
     "mat.sub": "Sipariş öncesi kumaş numuneleri postayla gönderilebilir.",
-    "mat.1": "İpek mikado & saten", "mat.2": "Chantilly & güpür dantel", "mat.3": "Elde dikilen inciler", "mat.4": "Devekuşu tüyü",
+    "mat.1": "Drapeli saten", "mat.2": "Dantel kollar", "mat.3": "Balenli korse, elde dikilen inciler", "mat.4": "Tüy detayı",
     "ms.eyebrow": "Online prova odası",
     "ms.title": "Sizinle, <em>birebir</em> ölçü",
     "ms.lede": "Tasarım, ölçü ve prova olmak üzere üç görüntülü randevu — hepsi kendi saat diliminizde. Ölçü görüşmesinde detaylı ölçü kartımızda size ve yardımcınıza canlı eşlik ediyoruz.",
@@ -361,6 +364,7 @@ window.I18N = {
     "faq.eyebrow": "Sorular",
     "faq.title": "Gelinlerin <em>bize sordukları</em>",
     "faq.cta": "Başka bir şey sorun",
+    "faq.more": "Cevabınızı bulamadınız mı? Bize yazın; 24 saat içinde Türkçe ya da İngilizce yanıtlarız.",
     q1: "Kendi ölçümü nasıl alırım?",
     a1: "Online prova sayfasındaki detaylı ölçü kartını bir arkadaşınız ve bir mezurayla doldurun — ya da ölçü görüşmesi için randevu alın, her ölçüyü görüntülü olarak birlikte alalım. Kesimden önce tüm rakamları birlikte kontrol ederiz.",
     q2: "Gelinlik üzerime tam oturmazsa ne olur?",

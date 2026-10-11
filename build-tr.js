@@ -19,13 +19,15 @@ const META = {
     "og:title": "Koleksiyonlar — Burak Altaş Atelier"
   },
   "atelier.html": {
-    description: "İzmir'e gelmeden ölçüye özel gelinlik: görüntülü randevular, detaylı ölçü kartı, üretimden fotoğraflar ve dünyaya hızlı gönderim. Sık sorulan sorular.",
+    description: "Konak, İzmir'deki Burak Altaş Atelier: showroom, tasarımcı ve ölçüye özel her gelinliğin arkasındaki malzemeler.",
     "og:title": "Atölye — Burak Altaş"
   },
+  "faq.html": {
+    description: "İzmir'den ölçüye özel gelinlik siparişi hakkında cevaplar: evde ölçü alma, kalıp, süre, tasarım değişiklikleri, gümrük, ödeme ve iade.",
+    "og:title": "Gelinlerin sorduğu sorular — Burak Altaş Atelier"
+  },
   "designer.html": {
-    title: "Burak Altaş — Tasarımcı | Burak Altaş Atelier",
-    description: "İzmir'deki Burak Altaş Atelier'in tasarımcısı Burak Altaş ile tanışın — ölçüye özel couture gelinlikler.",
-    "og:title": "Burak Altaş — tasarımcı"
+    title: "Burak Altaş — Tasarımcı | Burak Altaş Atelier"
   },
   "fitting.html": {
     description: "Burak Altaş atölyesiyle görüntülü randevu alın: tasarım görüşmesi, eşliğinde ölçü ve prova onayı. Saatler kendi saat diliminizde. Doldurulabilir, yazdırılabilir ölçü kartı.",

@@ -263,11 +263,11 @@
     { href: "collection.html?c=yakamoz", key: "nav.bridal", en: "Bridal", tr: "Gelinlik", p: "collection" },
     { href: "collection.html?c=afterparty", key: "nav.after", en: "After Party", tr: "After Party", p: "collection-ap" },
     { href: "atelier.html", key: "nav.atelier", en: "Atelier", tr: "Atölye", p: "atelier" },
-    { href: "designer.html", key: "nav.designer", en: "The designer", tr: "Tasarımcı", p: "designer" },
     { href: "fitting.html", key: "nav.fitting", en: "Online fitting", tr: "Online prova", p: "fitting" },
+    { href: "faq.html", key: "nav.faq", en: "Questions", tr: "Sorular", p: "faq" },
     { href: "contact.html", key: "nav.contact", en: "Contact", tr: "İletişim", p: "contact" }
   ];
-  const NAV = NAV_ALL.filter((n) => n.p !== "designer" || designerReady);
+  const NAV = NAV_ALL;
   /* Theme: the class is set in <head> by theme.js; here the visitor changes it */
   const isDark = () => document.documentElement.classList.contains("noir");
   function setTheme(dark) {
@@ -346,11 +346,11 @@
           </ul></div>
           <div><h2 class="ftr__h">${t("atelier")}</h2><ul class="ftr__list">
             <li><a href="atelier.html">${t("ourStory")}</a></li>
-            ${designerReady ? `<li><a href="designer.html">${esc((window.DESIGNER && window.DESIGNER.name) || "Burak Altaş")}</a></li>` : ""}
+            ${designerReady ? `<li><a href="atelier.html#designer">${esc((window.DESIGNER && window.DESIGNER.name) || "Burak Altaş")}</a></li>` : ""}
             <li><a href="fitting.html">${t("bookCall")}</a></li>
             <li><a href="fitting.html#measure-card">${t("measureGuide")}</a></li>
-            <li><a href="atelier.html#remote">${t("howRemote")}</a></li>
-            <li><a href="atelier.html#faq">${t("faq")}</a></li>
+            <li><a href="index.html#remote">${t("howRemote")}</a></li>
+            <li><a href="faq.html">${t("faq")}</a></li>
           </ul></div>
           <div><h2 class="ftr__h">${t("visit")}</h2><ul class="ftr__list">
             <li><a href="${S.mapsUrl}" target="_blank" rel="noopener">${esc(S.address)}</a></li>
@@ -853,13 +853,15 @@
      ====================================================================== */
 
   /* ---------- Home ---------- */
+  // Cover slideshow (phones show one panel at a time; desktop shows all three)
+  function initCover() {
+    const imgs = $$(".cover__panels img");
+    if (imgs.length < 2 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let i = 0;
+    setInterval(() => { imgs[i].classList.remove("is-on"); i = (i + 1) % imgs.length; imgs[i].classList.add("is-on"); }, 6000);
+  }
   function pageHome() {
-    // Cover slideshow (phones show one panel at a time; desktop shows all three)
-    const heroImgs = $$(".cover__panels img");
-    if (heroImgs.length > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      let i = 0;
-      setInterval(() => { heroImgs[i].classList.remove("is-on"); i = (i + 1) % heroImgs.length; heroImgs[i].classList.add("is-on"); }, 6000);
-    }
+    initCover();
     const featured = G.filter((g) => g.collection === "yakamoz" && g.featured);
     const ap = G.filter((g) => g.collection === "afterparty");
     onLang(() => {
@@ -1544,22 +1546,25 @@
   }
 
   /* ---------- Designer page (filled from the admin panel) ---------- */
-  function pageDesigner() {
+  /* The designer's section of the Atelier page: every field comes from the admin panel, empty ones stay hidden */
+  function renderDesigner() {
     const D = window.DESIGNER || {};
+    if (!$("#ds-name")) return;
     const paras = (txt) => String(txt || "").split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
     onLang(() => {
       const name = D.name || "Burak Altaş";
-      document.title = `${name} — ${L(D.title) || t("designer")} | Burak Altaş Atelier`;
       $("#ds-name").textContent = name;
       $("#ds-title").textContent = L(D.title) || t("designer");
       $("#ds-intro").textContent = L(D.intro);
       $("#ds-intro").hidden = !L(D.intro);
       $("#ds-since").textContent = D.since ? t("since", { y: D.since }) : "";
       $("#ds-since").hidden = !D.since;
-      $("#ds-photo").innerHTML = D.photo ? img(D.photo, name, { eager: true, sizes: "(min-width: 900px) 40vw, 90vw", w: 1200 }) : `<span class="ds-mono" aria-hidden="true">B<i>A</i></span>`;
+      $("#ds-photo").innerHTML = D.photo ? img(D.photo, name, { sizes: "(min-width: 900px) 40vw, 90vw", w: 1200 }) : "";
+      $("#ds-photo").hidden = !D.photo;
+      $("#ds-split").classList.toggle("split--solo", !D.photo);
       const bio = paras(L(D.bio));
-      $("#ds-bio").innerHTML = bio; $("#ds-story").hidden = !bio;
-      $("#ds-photo2").innerHTML = D.photo2 ? img(D.photo2, t("designerAtWork", { name }), { sizes: "(min-width: 900px) 45vw, 90vw", w: 1200 }) : "";
+      $("#ds-bio").innerHTML = bio; $("#ds-bio").hidden = !bio;
+      $("#ds-photo2").innerHTML = D.photo2 ? img(D.photo2, t("designerAtWork", { name }), { sizes: "100vw", w: 1600 }) : "";
       $("#ds-photo2").hidden = !D.photo2;
       const q = L(D.quote);
       $("#ds-quote").innerHTML = q ? `<blockquote class="quote-xl">“${esc(q)}”</blockquote><p class="sig">— ${esc(name)}</p>` : "";
@@ -1573,13 +1578,12 @@
     });
   }
 
-  /* ---------- Atelier: measurement guide hover ---------- */
+  /* ---------- Atelier (story) and Questions pages ---------- */
   function pageAtelier() {
-    $$(".mlist li").forEach((li) => {
-      const on = (v) => $$(`.figure-svg [data-m="${li.dataset.m}"]`).forEach((p) => p.classList.toggle("is-on", v));
-      li.addEventListener("mouseenter", () => on(true)); li.addEventListener("mouseleave", () => on(false));
-      li.addEventListener("focusin", () => on(true)); li.addEventListener("focusout", () => on(false));
-    });
+    initCover();
+    renderDesigner();
+  }
+  function pageFaq() {
     // FAQ structured data
     const en = (el) => { const d = document.createElement("div"); d.innerHTML = el.dataset.en ?? el.innerHTML; return d.textContent.trim(); };
     const faq = $$("#faq details").map((d) => ({ "@type": "Question", name: en(d.querySelector("summary")), acceptedAnswer: { "@type": "Answer", text: en(d.querySelector(".acc__body p")) } }));
@@ -1623,7 +1627,7 @@
   wireStaticLinks();
   initRails();
   initFinder();
-  ({ home: pageHome, collection: pageCollection, gown: pageGown, contact: pageContact, atelier: pageAtelier, designer: pageDesigner, shortlist: () => onLang(renderShortlist) }[page] || (() => {}))();
+  ({ home: pageHome, collection: pageCollection, gown: pageGown, contact: pageContact, atelier: pageAtelier, faq: pageFaq, shortlist: () => onLang(renderShortlist) }[page] || (() => {}))();
   initTimelines();
   observeReveals();
   initCursor();

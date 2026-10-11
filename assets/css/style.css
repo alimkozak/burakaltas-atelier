@@ -1239,3 +1239,5 @@ body[data-page="home"] .hdr:not(.is-scrolled) .hdr__cta { --bg: #f1e9dd; --fg: #
 .h2 { font-size: clamp(2.7rem, 6.9vw, 6.5rem); }
 .h3 { font-size: clamp(2.1rem, 3.9vw, 3.5rem); }
 .cover__title { font-size: clamp(2.7rem, 5.4vw, 5.2rem); line-height: 1; }
+/* Cormorant's default figures are old-style (they sit low like lowercase); prices and step numbers need lining figures */
+body { font-variant-numeric: lining-nums; }

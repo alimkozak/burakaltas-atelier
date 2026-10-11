@@ -24,6 +24,8 @@ window.I18N = {
     closeMenu: { en: "Close menu", tr: "Menüyü kapat" },
     home: { en: "Home", tr: "Ana sayfa" },
     language: { en: "Language", tr: "Dil" },
+    darkTheme: { en: "Dark theme", tr: "Koyu tema" },
+    lightTheme: { en: "Light theme", tr: "Açık tema" },
     shortlist: { en: "Shortlist", tr: "Favorilerim" },
     enquire: { en: "Enquire", tr: "Bilgi al" },
     bookCall: { en: "Book a video call", tr: "Online randevu" },

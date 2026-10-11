@@ -1,7 +1,6 @@
 /* ==========================================================================
    BURAK ALTAŞ ATELIER — Design system
-   Ivory · Ink · Champagne. Bodoni Moda (display) + Jost (text).
-   Signature motif: the arch (the atelier's mirror) and the "yakamoz" shimmer.
+   Light (ivory) and dark ("noir") themes. Cormorant Garamond (display) + Jost (text).
    ========================================================================== */
 
 @media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }
@@ -23,7 +22,7 @@
   --line-light: rgba(239, 231, 220, .18);
   --wa: #1f7a4d;
 
-  --serif: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --serif: "Cormorant Garamond", "Cormorant", Garamond, Georgia, serif;
   --sans: "Jost", "Futura", "Avenir Next", system-ui, sans-serif;
 
   --gutter: max(clamp(16px, 4vw, 56px), env(safe-area-inset-left), env(safe-area-inset-right));
@@ -310,14 +309,14 @@ body::after {
 
 /* ---------- Gown card ---------- */
 .card { position: relative; display: grid; gap: 16px; container-type: inline-size; }
-.card__media { position: relative; overflow: hidden; background: var(--sand); aspect-ratio: 3 / 4.2; border-radius: var(--radius-arch); }
+.card__media { position: relative; overflow: hidden; background: var(--sand); aspect-ratio: 3 / 4.3; }
 .card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .9s var(--ease), transform 1.4s var(--ease); }
 .card__media img + img { opacity: 0; }
 @media (hover: hover) {
   .card:hover .card__media img:first-child { transform: scale(1.04); }
   .card:hover .card__media img + img { opacity: 1; transform: scale(1.04); }
 }
-.card__no { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); z-index: 2; font-size: .66rem; letter-spacing: .24em; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
+.card__no { position: absolute; left: 14px; top: 14px; z-index: 2; font-size: .66rem; letter-spacing: .24em; color: #fff; text-shadow: 0 1px 8px rgba(0,0,0,.35); }
 .card__body { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 4px 12px; }
 .card__name { font-family: var(--serif); font-size: clamp(1.5rem, 2.2vw, 2rem); line-height: 1.05; }
 .card__name a::after { content: ""; position: absolute; inset: 0; z-index: 1; }
@@ -576,11 +575,7 @@ dialog[open] .modal { animation: rise .6s var(--ease); }
 
 .grid { grid-auto-flow: dense; display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(28px, 3.4vw, 56px) clamp(12px, 2.4vw, 36px); padding-block: clamp(36px, 5vw, 72px); }
 @media (min-width: 900px) { .grid { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1300px) { .grid { grid-template-columns: repeat(4, 1fr); } }
-.grid .card:nth-child(7n + 4) { grid-column: span 2; }
-.grid .card:nth-child(7n + 4) .card__media { aspect-ratio: auto; height: 100%; min-height: 0; border-radius: 0; }
 @container (min-width: 520px) { .card__body { grid-template-columns: 1fr auto; } }
-@media (max-width: 899px) { .grid .card:nth-child(7n + 4) { grid-column: span 2; } .grid .card:nth-child(7n + 4) .card__media { aspect-ratio: 4 / 4.4; } }
 .grid-empty { text-align: center; padding: 80px 0; display: grid; gap: 20px; justify-items: center; }
 @media (max-width: 520px) { .card__name { font-size: 1.3rem; } .card__meaning { font-size: .86rem; } .card__price { font-size: .66rem; } }
 
@@ -1075,7 +1070,7 @@ html[lang="tr"] .hide-tr { display: none; }
 .sl-save__btns { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Not-yet-made designs: honest labelling */
-.card__concept { position: absolute; left: 50%; top: 46px; transform: translateX(-50%); z-index: 2; white-space: nowrap; padding: 5px 12px; border-radius: 999px; background: rgba(252, 250, 246, .92); color: var(--ink); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; pointer-events: none; }
+.card__concept { position: absolute; left: 12px; top: 38px; z-index: 2; white-space: nowrap; padding: 5px 12px; border-radius: 999px; background: rgba(252, 250, 246, .92); color: var(--ink); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; pointer-events: none; }
 .gown__concept { margin: 14px 0 0; padding: 12px 14px; border-left: 2px solid var(--gold-deep); background: var(--paper); font-size: .9rem; color: var(--ink-2); }
 .gown__concept b { display: block; font-weight: 500; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 2px; }
 
@@ -1107,11 +1102,12 @@ html[lang="tr"] .hide-tr { display: none; }
 
 /* ==========================================================================
    Noir theme + home page v2 (glam couture direction)
-   Palette taken from the atelier's campaign photographs: espresso, stone, champagne.
-   Opt-in per page with <body class="noir"> until every page is redesigned.
+   Dark palette taken from the atelier's campaign photographs: espresso, stone, champagne.
+   theme.js puts class "noir" on <html> when the visitor has chosen the dark theme.
+   Sections that set text over photographs (.cover, .duo, .closing) use it in both themes.
    ========================================================================== */
-html:has(body.noir) { background: #0e0c0a; }
-.noir {
+html.noir { background: #0e0c0a; }
+.noir, .cover, .duo, .closing {
   --ivory: #0e0c0a; --paper: #14110e; --sand: #1b1713; --blush: #241d18;
   --ink: #f1e9dd; --ink-2: #cfc4b5; --mute: #a39685;
   --gold: #c9a877; --gold-deep: #a9854f;
@@ -1119,8 +1115,17 @@ html:has(body.noir) { background: #0e0c0a; }
   --line: rgba(241, 233, 221, .16);
   color-scheme: dark;
 }
+.cover, .duo, .closing { color: var(--ink); }
 .noir .hdr.is-scrolled { background: rgba(14, 12, 10, .86); }
-.noir .shimmer { color: var(--ink); }
+/* over the cover the header is always light, whatever the theme */
+body[data-page="home"] .hdr:not(.is-scrolled) { color: #f1e9dd; }
+body[data-page="home"] .hdr:not(.is-scrolled) .hdr__cta { --bg: #f1e9dd; --fg: #0e0c0a; --bd: #f1e9dd; }
+
+/* Theme switch: a moon while light, a sun while dark */
+.theme-btn .i-sun, .noir .theme-btn .i-moon { display: none; }
+.noir .theme-btn .i-sun { display: block; }
+@media (max-width: 599px) { .hdr .theme-btn { display: none; } }
+.menu__theme { font: inherit; letter-spacing: inherit; text-transform: inherit; text-decoration: underline; text-underline-offset: 4px; }
 
 /* Light surfaces and inks that were written as fixed colours, restated for the dark theme */
 .noir .icon-btn:hover { background: rgba(241, 233, 221, .08); }
@@ -1134,13 +1139,25 @@ html:has(body.noir) { background: #0e0c0a; }
 .noir .tc__verdict[data-tone="tight"] em { color: #dba05a; }
 .noir .tc__verdict[data-tone="late"] em, .noir .field__err { color: #e58a7c; }
 .noir .input[aria-invalid="true"] { border-color: #e58a7c; }
+.noir .mcard__bar { background: rgba(14, 12, 10, .95); }
+@media (max-width: 959px) { .noir .mcard__figwrap { background: rgba(14, 12, 10, .96); } }
+.noir .appt input:checked + .appt__in .appt__n { color: #85663a; }
+.noir .slot[aria-pressed="true"] span { color: rgba(14, 12, 10, .7); }
+.noir .mcard__note { background: var(--sand); }
+.noir .mrow.is-on .mrow__tip { color: var(--gold); }
+.noir .mrow__warn.is-warn { color: #dba05a; }
+.noir .mrow.has-warn .mrow__in .input { border-bottom-color: #dba05a; }
+.noir .mrow__warn, .noir .mrow__warn.is-err, .noir .mcard__saved.is-err { color: #e58a7c; }
+.noir .mrow__in .input[aria-invalid="true"] { border-bottom-color: #e58a7c; }
+.noir .ds-mono { color: rgba(241, 233, 221, .18); }
+.noir .map__load:hover, .noir .map__load:focus-visible { background: rgba(14, 12, 10, .55); }
 .noir .select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23f1e9dd'%3E%3Cpath d='M1 1l5 5 5-5'/%3E%3C/svg%3E"); }
 
 /* Wordmark as the atelier writes it: wide-set capitals over a small "ATELIER" */
-.noir .logo__mono { display: none; }
-.noir .logo__word { font-family: var(--serif); font-size: clamp(13px, 3.7vw, 17px); font-weight: 400; letter-spacing: .3em; margin-right: -.3em; white-space: nowrap; }
-.noir .logo::after { content: "Atelier"; font-size: 8px; font-weight: 500; letter-spacing: .52em; margin-right: -.52em; text-transform: uppercase; opacity: .7; margin-top: 6px; }
-.noir .ftr .logo::after { content: none; }
+.logo__mono { display: none; }
+.logo__word { font-family: var(--serif); font-size: clamp(14px, 4vw, 19px); font-weight: 500; letter-spacing: .3em; margin-right: -.3em; white-space: nowrap; }
+.logo::after { content: "Atelier"; font-size: 8px; font-weight: 500; letter-spacing: .52em; margin-right: -.52em; text-transform: uppercase; opacity: .7; margin-top: 6px; }
+.ftr .logo::after { content: none; }
 
 /* ---------- Cover: three campaign panels, one on phones ---------- */
 .cover { position: relative; min-height: 100svh; display: grid; align-items: end; overflow: hidden; background: var(--night); }
@@ -1202,3 +1219,23 @@ html:has(body.noir) { background: #0e0c0a; }
 .closing__bg::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(8, 7, 6, .35), rgba(8, 7, 6, .9)); }
 .closing .wrap { position: relative; z-index: 1; }
 .closing__note { max-width: 34em; opacity: .8; }
+
+/* ---------- Cormorant Garamond runs lighter and smaller than the face it replaced ---------- */
+.display { font-weight: 500; letter-spacing: -.01em; line-height: .98; }
+.display em, .serif-it { font-weight: 500; }
+.h4, .card__name, .step h3, .review blockquote, .define__text, .tc__verdict, .acc--big summary, .chatpick__title { font-weight: 500; }
+.define__word, .gown__name, .ftr__big { font-weight: 500; letter-spacing: -.01em; }
+.card__name { font-size: clamp(1.65rem, 2.4vw, 2.2rem); }
+.card__meaning { font-size: 1.12rem; }
+.gown__meaning { font-size: 1.45rem; }
+.define__ipa { font-size: 1.3rem; }
+.gown__price b { font-size: 2.3rem; font-weight: 500; }
+.step__n { font-weight: 500; }
+@media (max-width: 520px) { .card__name { font-size: 1.45rem; } .card__meaning { font-size: 1rem; } }
+
+/* ---------- Gown page: the conversation leads, the store follows ---------- */
+.gown__lead { min-height: 58px; font-size: .8rem; }
+.gown__ctas-row .btn { min-width: 0; white-space: normal; text-align: center; line-height: 1.3; padding: 8px 14px; }
+.h2 { font-size: clamp(2.7rem, 6.9vw, 6.5rem); }
+.h3 { font-size: clamp(2.1rem, 3.9vw, 3.5rem); }
+.cover__title { font-size: clamp(2.7rem, 5.4vw, 5.2rem); line-height: 1; }

@@ -174,6 +174,8 @@
     arrowL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M21 12H3M9 6l-6 6 6 6"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg>',
     menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M3 8h18M3 16h12"/></svg>',
+    moon: '<svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>',
+    sun: '<svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M12 3v13M7 8l5-5 5 5M5 13v7h14v-7"/></svg>',
     bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M5 8h14l-1 13H6L5 8zM9 8V6a3 3 0 016 0v2"/></svg>',
     shield: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>',
@@ -266,6 +268,17 @@
     { href: "contact.html", key: "nav.contact", en: "Contact", tr: "İletişim", p: "contact" }
   ];
   const NAV = NAV_ALL.filter((n) => n.p !== "designer" || designerReady);
+  /* Theme: the class is set in <head> by theme.js; here the visitor changes it */
+  const isDark = () => document.documentElement.classList.contains("noir");
+  function setTheme(dark) {
+    document.documentElement.classList.toggle("noir", dark);
+    try { localStorage.setItem("ba-theme", dark ? "dark" : "light"); } catch {}
+    const meta = $('meta[name="theme-color"]');
+    if (meta) meta.content = dark ? "#0e0c0a" : "#f7f2eb";
+    $$("[data-theme-toggle]").forEach((b) => b.setAttribute("aria-pressed", dark));
+    $$("[data-theme-label]").forEach((el) => (el.textContent = t(dark ? "lightTheme" : "darkTheme")));
+  }
+
   function renderChrome() {
     const hdr = $("[data-header]");
     if (hdr) {
@@ -284,6 +297,7 @@
           <div class="lang" role="group" aria-label="${t("language")}">
             <button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button><span>/</span><button type="button" data-lang="tr" aria-pressed="${lang === "tr"}">TR</button>
           </div>
+          <button class="icon-btn theme-btn" type="button" data-theme-toggle aria-pressed="${isDark()}" aria-label="${t("darkTheme")}">${ICON.moon}${ICON.sun}</button>
           <a class="icon-btn" href="shortlist.html" aria-label="${t("shortlist")}">${ICON.heart.replace("<svg", '<svg fill="none" stroke="currentColor" stroke-width="1.3"')}<span class="badge" data-sl-count></span></a>
           <a class="btn btn--sm hdr__cta" href="fitting.html" ${page === "fitting" ? 'aria-current="page"' : ""}>${t("bookCall")}</a>
         </div>
@@ -310,6 +324,7 @@
         <a href="${S.etsyShop}" target="_blank" rel="noopener">Etsy</a>
         ${STORES.map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>`).join("")}
         <span class="lang"><button type="button" data-lang="en" aria-pressed="${lang === "en"}">EN</button><span>/</span><button type="button" data-lang="tr" aria-pressed="${lang === "tr"}">TR</button></span>
+        <button class="menu__theme" type="button" data-theme-toggle aria-pressed="${isDark()}"><span data-theme-label>${t(isDark() ? "lightTheme" : "darkTheme")}</span></button>
       </div>`;
 
     const ftr = $("[data-footer]");
@@ -485,9 +500,10 @@
     document.addEventListener("click", (e) => {
       const lb = e.target.closest("[data-lang]");
       if (lb) { setLang(lb.dataset.lang); return; }
+      if (e.target.closest("[data-theme-toggle]")) { setTheme(!isDark()); return; }
       if (e.target.closest("[data-forget]") && confirm(t("forgetAsk"))) {
         // Personal details live only in this browser; let the bride wipe them (shared family laptops)
-        try { Object.keys(localStorage).filter((k) => k.startsWith("ba-") && k !== "ba-lang").forEach((k) => localStorage.removeItem(k)); } catch {}
+        try { Object.keys(localStorage).filter((k) => k.startsWith("ba-") && k !== "ba-lang" && k !== "ba-theme").forEach((k) => localStorage.removeItem(k)); } catch {}
         syncHearts(); toast(t("forgotten")); setTimeout(() => location.reload(), 900); return;
       }
       if (e.target.closest("[data-menu-open]")) openMenu(true);
@@ -1076,15 +1092,15 @@
           </div>
           <p class="small opts__note" id="opts-note" hidden>${t("extrasOnQuote")}</p>
           <div class="gown__ctas">
-            <a class="btn btn--etsy btn--block" href="${etsyFor(g)}" target="_blank" rel="noopener" data-etsy>${ICON.bag} ${t("orderEtsy")}</a>
-            ${storesFor(g).length ? `<p class="gown__stores"><span>${t("otherStores")}:</span> ${storesFor(g).map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)} ↗</a>`).join("")}</p>` : ""}
-            <p class="small" id="etsy-note" hidden>${t("etsyChoices")}</p>
+            <a class="btn btn--wa btn--block gown__lead" href="#" target="_blank" rel="noopener" data-wa-gown>${ICON.wa} ${t("askWa")}</a>
             <div class="gown__ctas-row">
-              <a class="btn btn--wa" href="#" target="_blank" rel="noopener" data-wa-gown>${ICON.wa} ${t("askWa")}</a>
+              <a class="btn btn--ghost" href="fitting.html?type=consult&g=${g.id}">${ICON.video} ${t("bookGownCall")}</a>
               <button class="icon-btn heart" style="margin:0" type="button" data-heart="${g.id}" aria-pressed="false" aria-label="${t("addShortlist")}">${ICON.heart}</button>
               <button class="icon-btn" type="button" data-share aria-label="${t("share")}">${ICON.share}</button>
             </div>
-            <a class="btn btn--ghost btn--block" href="fitting.html?type=consult&g=${g.id}">${ICON.video} ${t("bookGownCall")}</a>
+            <a class="btn btn--ghost btn--block" href="${etsyFor(g)}" target="_blank" rel="noopener" data-etsy>${ICON.bag} ${t("orderEtsy")}</a>
+            ${storesFor(g).length ? `<p class="gown__stores"><span>${t("otherStores")}:</span> ${storesFor(g).map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)} ↗</a>`).join("")}</p>` : ""}
+            <p class="small" id="etsy-note" hidden>${t("etsyChoices")}</p>
             <p class="gown__note">${ICON.shield}<span>${t("etsyProtect")}</span></p>
           </div>
           <div class="acc">

@@ -29,7 +29,7 @@
   }
   // Saves carry the version of the data they were based on, so two people editing at once
   // can't silently overwrite each other (the server answers 409 if someone saved in between)
-  const VER_OF = { gowns: "gowns", designer: "designer", reviews: "reviews", config: "config" };
+  const VER_OF = { gowns: "gowns", designer: "designer", reviews: "reviews", media: "media", config: "config" };
   // Saves run one after another: a double tap on Save sends the second save with the version the
   // first one returned, instead of tripping the "someone else saved" check against itself
   let queue = Promise.resolve(), uploading = 0;
@@ -124,7 +124,7 @@
     const r = await post("upload", { name, lg: make(1800, 0.85), sm: make(800, 0.8), xs: make(480, 0.78) });
     return r.path;
   }
-  function photoManager(container, list, { name, max = 12, onChange }) {
+  function photoManager(container, list, { name, max = 12, onChange, labels }) {
     const draw = () => {
       container.innerHTML = `
         <label class="drop" tabindex="0">
@@ -136,8 +136,8 @@
         <div class="photos">${list.map((id, i) => `
           <div class="photo" draggable="true" data-i="${i}">
             <img src="${esc(src(id, 400))}" alt="">
-            ${max > 1 && i === 0 ? `<span class="photo__tag">Kapak</span>` : ""}${max > 1 && i === 1 ? `<span class="photo__tag">2. görsel</span>` : ""}
-            ${max > 1 && i > 0 ? `<button type="button" class="photo__cover" data-cover aria-label="Kapak yap" title="Kapak yap">★</button>` : ""}
+            ${labels ? (labels[i] ? `<span class="photo__tag">${esc(labels[i])}</span>` : "") : `${max > 1 && i === 0 ? `<span class="photo__tag">Kapak</span>` : ""}${max > 1 && i === 1 ? `<span class="photo__tag">2. görsel</span>` : ""}`}
+            ${!labels && max > 1 && i > 0 ? `<button type="button" class="photo__cover" data-cover aria-label="Kapak yap" title="Kapak yap">★</button>` : ""}
             <div class="photo__acts">
               ${max > 1 ? `<button type="button" data-mv="-1" aria-label="Sola taşı" ${i === 0 ? "disabled" : ""}>←</button>` : "<span></span>"}
               <button type="button" data-rm aria-label="Kaldır">✕</button>
@@ -587,8 +587,8 @@
     while (d.highlights.length < 3) d.highlights.push({ value: "", label: {} });
     view.innerHTML = `
       <div class="head">
-        <div><h1>Tasarımcı sayfası</h1><p>Tasarımcının tanıtım sayfası. Boş bıraktığınız alanlar sitede görünmez; sayfa yarım dolu haliyle de düzgün görünür.</p><div class="meter"><i id="meter"></i></div></div>
-        <a class="btn btn--ghost" href="/designer.html" target="_blank" rel="noopener">Sayfayı gör ↗</a>
+        <div><h1>Tasarımcı</h1><p>Atölye sayfasındaki "Tasarımcı" bölümü. Boş bıraktığınız alanlar sitede görünmez; bölüm yarım dolu haliyle de düzgün görünür.</p><div class="meter"><i id="meter"></i></div></div>
+        <a class="btn btn--ghost" href="/atelier.html#designer" target="_blank" rel="noopener">Bölümü gör ↗</a>
       </div>
       <form id="df" novalidate>
         <section class="card">
@@ -650,10 +650,62 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = $("button[type=submit]", form); btn.disabled = true;
-      try { await post("designer", { designer: collect() }); dirty = false; await reload(); toast("Tasarımcı sayfası kaydedildi"); renderDesigner(); }
+      try { await post("designer", { designer: collect() }); dirty = false; await reload(); toast("Tasarımcı bölümü kaydedildi"); renderDesigner(); }
       catch (err) { toast(err.message, true); btn.disabled = false; }
     });
     meter();
+  }
+
+  /* ======================================================================
+     SAYFA FOTOĞRAFLARI — photos that sit in the pages themselves (cover, showroom, …)
+     Saved as MEDIA.pages: slot name → photos. An empty slot shows the photo written in the page.
+     ====================================================================== */
+  function renderPages() {
+    const P3 = ["Orta · telefonda ilk", "Sol", "Sağ"];
+    const banner = "Boş bırakırsanız afiş, o koleksiyonun öne çıkan (★) modellerinin kapak fotoğraflarından oluşur.";
+    const GROUPS = [
+      ["Ana sayfa", "/", [
+        { k: "homeCover", n: 3, t: "Kapak", d: "Yan yana üç dikey fotoğraf. Telefonda sırayla, tek tek görünür.", labels: P3 },
+        { k: "homeProcess", n: 1, t: "Süreç bölümü", d: "“Atölyemizden kapınıza” adımlarının altındaki detay fotoğrafı." },
+        { k: "homeAfterParty", n: 2, t: "After Party", d: "Yan yana iki dikey fotoğraf.", labels: ["Sol", "Sağ"] },
+        { k: "homeClosing", n: 1, t: "Kapanış", d: "“Bize gününüzü anlatın” yazısının arkasındaki soluk fotoğraf." }
+      ]],
+      ["Atölye sayfası", "/atelier.html", [
+        { k: "atelierCover", n: 3, t: "Kapak · showroom", d: "Showroom'dan üç dikey fotoğraf.", labels: P3 },
+        { k: "atelierStory", n: 1, t: "Hikâye", d: "Atölye yazısının yanındaki fotoğraf." },
+        { k: "atelierMaterials", n: 4, t: "Malzemeler", d: "Dört yakın çekim. Sitedeki başlıklar bu sırayla yazılıdır; sırayı değiştirirseniz başlıklar uymaz.", labels: ["1 · Saten", "2 · Dantel", "3 · Korse & inci", "4 · Tüy"] }
+      ]],
+      ["Koleksiyon sayfası", "/collection.html", [
+        { k: "collectionBespoke", n: 1, t: "“Aradığınız yok mu?” bölümü", d: "Sayfanın altındaki özel tasarım çağrısının fotoğrafı." },
+        { k: "banner-all", n: 3, t: "Afiş · Tümü", d: banner, labels: P3 },
+        ...DB.collections.map((c) => ({ k: `banner-${c.id}`, n: 3, t: `Afiş · ${(c.name && (c.name.tr || c.name.en)) || c.id}`, d: banner, labels: P3 }))
+      ]]
+    ];
+    const pages = clone((DB.media && DB.media.pages) || {});
+    view.innerHTML = `
+      <div class="head">
+        <div><h1>Sayfa fotoğrafları</h1><p>Sayfaların kendi fotoğrafları: kapaklar, After Party, showroom, malzemeler. Bir yeri boş bırakırsanız sitede o yerin ilk hâlindeki fotoğraf görünür. Model fotoğrafları için <a href="#modeller">Modeller</a>.</p></div>
+      </div>
+      <form id="pf" novalidate>
+        ${GROUPS.map(([title, href, slots]) => `
+        <section class="card">
+          <h2>${esc(title)} <a href="${href}" target="_blank" rel="noopener" style="font-size:.85rem;font-weight:400;margin-left:8px">Sayfayı gör ↗</a></h2>
+          ${slots.map((s) => `<div class="f full" style="margin-top:18px"><span><b>${esc(s.t)}</b> · ${s.n} fotoğraf</span><p class="hint">${esc(s.d)}</p><div data-slot="${esc(s.k)}"></div></div>`).join("")}
+        </section>`).join("")}
+        <div class="savebar"><span class="msg">Değişiklik yok</span><button type="submit" class="btn btn--ok">Kaydet</button></div>
+      </form>`;
+    const form = $("#pf");
+    GROUPS.flatMap((g) => g[2]).forEach((s) => {
+      pages[s.k] = (pages[s.k] || []).slice(0, s.n);
+      photoManager($(`[data-slot="${s.k}"]`, form), pages[s.k], { name: () => `sayfa-${s.k}`, max: s.n, onChange: markDirty, labels: s.labels });
+    });
+    form.addEventListener("click", (e) => { if (e.target.closest("[data-rm], [data-mv]")) markDirty(); });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = $("button[type=submit]", form); btn.disabled = true;
+      try { await post("media", { pages }); dirty = false; await reload(); toast("Sayfa fotoğrafları kaydedildi"); renderPages(); }
+      catch (err) { toast(err.message, true); btn.disabled = false; }
+    });
   }
 
   /* ======================================================================
@@ -843,7 +895,7 @@
       ]],
       ["İçerik", [
         { st: ok(!sampleReviews), t: "Gelin yorumları", d: sampleReviews ? "Örnek yorumlar (Elif, Sarah, Layla, Anna) duruyor — izin alarak gerçekleriyle değiştirin" : "Gerçek yorumlar girilmiş", go: "#yorumlar" },
-        { st: ok(designerOk), t: "Tasarımcı sayfası", d: designerOk ? "Portre ve hikâye girilmiş" : "Tasarımcı portresi ve hikâyesi eksik — sayfa menüde görünmüyor", go: "#tasarimci" }
+        { st: ok(designerOk), t: "Tasarımcı bölümü", d: designerOk ? "Portre ve hikâye girilmiş" : "Tasarımcı portresi ve hikâyesi eksik — Atölye sayfasında yalnızca ad ve ünvan görünüyor", go: "#tasarimci" }
       ]],
       ["Bilgiler — elle teyit", [
         { k: "email", t: "E-posta adresi", d: `${S.email} — alan adı alınınca bu adres kurulmalı ya da gerçek adres yazılmalı`, go: "#ayarlar" },
@@ -851,7 +903,7 @@
         { k: "domain", t: "Alan adı", d: `${S.domain} — satın alındı ve bu adres doğru`, go: "#ayarlar" },
         { k: "policies", t: "Gizlilik & koşullar sayfası okundu ve onaylandı", d: "Kişisel verilerin saklanma süresi, üretim süreleri (satış koşulları mağazalarda)" },
         { k: "measure", t: "Ölçü kartı ifadeleri teyit edildi", d: "Bolluk payı, topuk yüksekliği, \"2 kg / 2 cm değişirse yeniden ölçün\"" },
-        { k: "numbers", t: "Ana sayfadaki rakamlar teyit edildi", d: "Örn. işçilik saatleri ve inci sayıları" },
+        { k: "pagephotos", t: "Sayfa fotoğrafları gerçek ve logosuz", d: "Kapak, After Party ve showroom fotoğrafları Instagram kopyası değil, orijinal dosyalar", go: "#sayfalar" },
         { k: "consent", t: "Gerçek gelin fotoğrafları için izin alındı", d: "Site ve Instagram için gelinden yazılı onay (kişisel veriler kanunu gereği)" },
         { k: "callfees", t: "Ölçü ve prova görüşmelerinin ücreti netleşti", d: "\"Siparişe dahil\" mi? Şu an yalnızca tasarım görüşmesi \"ücretsiz\" yazıyor" },
         { k: "staff", t: "Kadın personel bilgisi netleşti", d: "Ölçüyü bir kadının alması seçilebiliyor — tasarım görüşmesinde de kadın personel olabilir mi" }
@@ -1076,6 +1128,7 @@
     if (h.startsWith("model=")) renderEditor(h.slice(6));
     else if (h.startsWith("yeni")) renderEditor(null, h.split("=")[1]);
     else if (h === "tasarimci") renderDesigner();
+    else if (h === "sayfalar") renderPages();
     else if (h === "yorumlar") renderReviews();
     else if (h === "ayarlar") renderSettings();
     else if (h === "instagram") renderInstagram();

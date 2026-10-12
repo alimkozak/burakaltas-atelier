@@ -31,6 +31,23 @@ const pick = (o) => (o && typeof o === "object" ? o.en || o.tr || "" : o || "");
    working on the site never get merge conflicts on these lines. */
 const crypto = require("crypto");
 const ASSET_REF = /((?:src|href)="(?:\.\.\/|\/)?assets\/[^"?]+\.(?:js|css))(?:\?v=[a-f0-9]+)?"/g;
+/* Page photos chosen in the admin panel (MEDIA.pages) are written into the published pages and the
+   Turkish twins, so visitors never download a default photo first. The source pages keep their
+   defaults; app.js applies the same choice in the browser for the local preview. */
+const uploadXs = () => {
+  const dir = path.join(root, "assets/img/uploads");
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /-xs\.(jpg|png|webp)$/.test(f)).map((f) => `assets/img/uploads/${f.replace(/-xs(\.\w+)$/, "$1")}`) : [];
+};
+function bakeSlots(html, pages, xs = uploadXs()) {
+  if (!pages) return html;
+  return html.replace(/<img\b[^>]*\bdata-slot="([\w-]+):(\d+)"[^>]*>/g, (tag, key, i) => {
+    const id = (pages[key] || [])[+i];
+    const cur = (tag.match(/\bsrc="([^"]*)"/) || [])[1];
+    if (!id || id === cur || !/^assets\/img\/uploads\/[\w.-]+\.(jpg|png|webp)$/.test(id)) return tag;
+    const set = `${xs.includes(id) ? `${id.replace(/(\.\w+)$/, "-xs$1")} 480w, ` : ""}${id.replace(/(\.\w+)$/, "-sm$1")} 800w, ${id} 1800w`;
+    return tag.replace(/\bsrc="[^"]*"/, `src="${id}"`).replace(/\bsrcset="[^"]*"/, `srcset="${set}"`).replace(/\balt="[^"]*"/, 'alt="A gown by Burak Altaş Atelier"');
+  });
+}
 function stampAssets(dir, { strip = false } = {}) {
   const hashes = {};
   const hashOf = (rel) => (hashes[rel] ??= fs.existsSync(path.join(dir, rel))
@@ -162,7 +179,7 @@ function build({ dist = false } = {}) {
     fs.writeFileSync(path.join(TR_DIR, file), toTurkish(gownHtml(g, "tr"), { file, TR: TRX, pages: PAGES, domain: S.domain, meta: {} }));
   }
   // Turkish twins of the static pages (gown.html is the fallback template for unbuilt gowns)
-  for (const f of STATIC) fs.writeFileSync(path.join(TR_DIR, f), toTurkish(fs.readFileSync(path.join(root, f), "utf8"), { file: f, TR: TRX, pages: PAGES, domain: S.domain }));
+  for (const f of STATIC) fs.writeFileSync(path.join(TR_DIR, f), toTurkish(bakeSlots(fs.readFileSync(path.join(root, f), "utf8"), (W.MEDIA || {}).pages), { file: f, TR: TRX, pages: PAGES, domain: S.domain }));
   fs.appendFileSync(path.join(root, "assets/js/built.js"), `window.BUILT_TR = ${JSON.stringify(PAGES)};\n`);
 
   // Sitemap: every page in both languages, each pointing at its twin
@@ -223,7 +240,8 @@ function makeDist() {
     ["COLLECTIONS", "GOWNS", "MEDIA", "REVIEWS", "DESIGNER"].filter((k) => W0[k] !== undefined)
       .map((k) => `window.${k} = ${JSON.stringify(k === "GOWNS" ? W0.GOWNS.filter((g) => !g.draft) : W0[k], null, 1)};`).join("\n") + "\n";
   // Every upload path mentioned in the catalogue or settings (photos, posters, videos, portraits)
-  const refs = publicData + fs.readFileSync(path.join(root, "assets/js/config.js"), "utf8");
+  // …and the default page photos written in the pages themselves, so a fallback never points at a missing file
+  const refs = publicData + fs.readFileSync(path.join(root, "assets/js/config.js"), "utf8") + html.map((f) => fs.readFileSync(path.join(root, f), "utf8")).join("");
   const used = new Set(refs.match(/assets\/(?:img|video)\/uploads\/[\w.-]+/g) || []);
   for (const f of [...html, ...PUBLIC]) {
     const from = path.join(root, f);
@@ -248,7 +266,7 @@ function makeDist() {
   }
   for (const f of fs.readdirSync(DIST).filter((f) => f.endsWith(".html") && !/^gown-/.test(f) && f !== "404.html")) {
     const file = path.join(DIST, f);
-    fs.writeFileSync(file, withLangLinks(fs.readFileSync(file, "utf8"), S.domain, f, "en"));
+    fs.writeFileSync(file, withLangLinks(bakeSlots(fs.readFileSync(file, "utf8"), (W0.MEDIA || {}).pages), S.domain, f, "en"));
   }
   // The shop itself for Google (local search, Maps): built from the settings, so it never goes stale
   const W = loadSite();

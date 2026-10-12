@@ -13,7 +13,8 @@ Paneldeki sekmeler:
 | Sekme | Ne yapılır |
 |---|---|
 | **Modeller** | Yeni model ekleme, düzenleme, kopyalama, silme. Fotoğrafları sürükleyip bırakın, panel küçültüp web için hazırlar. ↑↓ ile sıralayın, ★ ile ana sayfada öne çıkarın. Her modele bir **video** eklenebilir. Her modelde eksikleri gösteren bir kontrol listesi vardır. |
-| **Tasarımcı** | Burak'ın sayfası (`designer.html`): portre, atölye fotoğrafı, hikâye, alıntı, rakamlar, basın. Boş alanlar sitede görünmez. |
+| **Tasarımcı** | Atölye sayfasındaki "Tasarımcı" bölümü: portre, atölye fotoğrafı, hikâye, alıntı, rakamlar, basın. Boş alanlar sitede görünmez. |
+| **Sayfa fotoğrafları** | Sayfaların kendi fotoğrafları: ana sayfa kapağı, After Party, kapanış; Atölye kapağı (showroom), hikâye, malzemeler; koleksiyon afişleri. Sürükleyip bırakın. Boş bırakılan yerde sayfadaki ilk fotoğraf görünür. |
 | **Gelin yorumları** | Gerçek yorumları ekleyin, sıralayın, silin. Yoruma gelinin fotoğrafını ekleyebilirsiniz. "Giydiği model" alanı bir modelin adıyla aynıysa, yorum o modelin sayfasında **"… modelini giyen gelinler"** bölümünde de görünür. |
 | **Ayarlar** | WhatsApp, e-posta, Etsy, Instagram, adres, çalışma saatleri, online randevu gün ve saatleri, **kişiselleştirme ücretleri**, **canlı sohbet**, **ziyaretçi istatistikleri**, fiyatları göster/gizle. |
 | **Yayınla** | Üstte **Yayına hazırlık** listesi bulunur. Yayından önce eksik olanları kendisi bulur: örnek fotoğraflar, Etsy linkleri, örnek yorumlar, boş tasarımcı sayfası, teyit bekleyen metinler. Her maddede "Düzelt →" bağlantısı vardır. Altta internete yüklenecek **`yayin`** klasörünü hazırlama adımları yer alır. |
@@ -62,8 +63,9 @@ Bu, test ve küçük ekip için geçici bir çözümdür. Kalıcı çözüm, sun
 | `index.html` | Ana sayfa: hero, Yakamoz koleksiyonu, siluetler, uzaktan dikim süreci, "Yetişir mi?" hesaplayıcı, After Party, yorumlar, Instagram |
 | `collection.html` | Katalog: koleksiyon, siluet, yaka ve detay filtreleri, sıralama, **ad ya da kodla arama** (Instagram'da paylaşılan "BA-104" gibi kodlar; `collection.html?q=BA-104` linki de çalışır) ve **son baktıklarınız** şeridi |
 | `gown-<model>.html` | Model sayfaları (panel üretir): galeri, kişiselleştirme, Etsy ve WhatsApp butonları, takvim, kombin önerileri |
-| `designer.html` | Burak Altaş'ın tanıtım sayfası (panelden doldurulur) |
-| `atelier.html` | Atölye hikâyesi, malzemeler, uzaktan ölçü süreci, SSS |
+| `designer.html` | Yalnızca yönlendirme: tasarımcı artık Atölye sayfasının bir bölümü (`atelier.html#designer`) |
+| `atelier.html` | Atölye: showroom, hikâye, tasarımcı bölümü (panelden doldurulur), malzemeler |
+| `faq.html` | Gelinlerin sorduğu sorular (ölçü, süre, gümrük, ödeme, iade) |
 | `fitting.html` | **Online prova odası:** 3 randevu türü, gelinin kendi saat diliminde gün ve saat seçimi, ölçü görüşmesi için kadın / erkek / fark etmez tercihi, hazırlık listesi, **ölçü kartı** (aşağıda) |
 | `contact.html` | 3 adımlı talep formu (WhatsApp ya da e-posta ile gönderilir) |
 | `policies.html` | Gizlilik (KVKK & GDPR), sipariş, üretim, kargo, iade & tadilat. Her sayfanın altından bağlantı verilir. |

@@ -1007,7 +1007,41 @@ window.MEDIA = {
   "pearls": "1649502066352-9cd7ade30316",
   "veil": "1550180390-11f5e76784c8",
   "window": "1678831019375-249f108f78ce",
-  "underVeil": "1641836014185-61709635efe0"
+  "underVeil": "1641836014185-61709635efe0",
+  "pages": {
+    "homeCover": [
+      "assets/img/uploads/sayfa-cape-doorway.jpg",
+      "assets/img/uploads/sayfa-ballgown-stairs.jpg",
+      "assets/img/uploads/sayfa-fringe-mini-stone.jpg"
+    ],
+    "homeProcess": [
+      "assets/img/uploads/sayfa-corset-detail.jpg"
+    ],
+    "homeAfterParty": [
+      "assets/img/uploads/sayfa-rosette-mini-columns.jpg",
+      "assets/img/uploads/sayfa-rosette-mini-steps.jpg"
+    ],
+    "homeClosing": [
+      "assets/img/uploads/sayfa-ballgown-salon.jpg"
+    ],
+    "atelierCover": [
+      "assets/img/uploads/sayfa-showroom-satin.jpg",
+      "assets/img/uploads/sayfa-showroom-lace.jpg",
+      "assets/img/uploads/sayfa-showroom-ballgown.jpg"
+    ],
+    "atelierStory": [
+      "assets/img/uploads/sayfa-ballgown-stairs.jpg"
+    ],
+    "atelierMaterials": [
+      "assets/img/uploads/sayfa-detail-satin.jpg",
+      "assets/img/uploads/sayfa-detail-lace.jpg",
+      "assets/img/uploads/sayfa-detail-pearls.jpg",
+      "assets/img/uploads/sayfa-detail-feathers.jpg"
+    ],
+    "collectionBespoke": [
+      "assets/img/uploads/sayfa-pearl-fringe-seated.jpg"
+    ]
+  }
 };
 
 /* Gelin yorumları */
@@ -1062,7 +1096,7 @@ window.REVIEWS = [
   }
 ];
 
-/* Tasarımcı sayfası (designer.html). Boş alanlar sitede görünmez. */
+/* Tasarımcı bölümü (Atölye sayfasında). Boş alanlar sitede görünmez. */
 window.DESIGNER = {
   "name": "Burak Altaş",
   "title": {

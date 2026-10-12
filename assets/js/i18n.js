@@ -48,6 +48,7 @@ window.I18N = {
     fabTip: { en: "Questions? We reply fast", tr: "Sorunuz mu var? Hemen yanıtlıyoruz" },
     view: { en: "View", tr: "İncele" },
     from: { en: "From", tr: "Başlangıç" },
+    pagePhotoAlt: { en: "A gown by Burak Altaş Atelier", tr: "Burak Altaş Atelier imzalı bir gelinlik" },
     priceAsk: { en: "Price on request", tr: "Fiyat için yazın" },
     breadcrumb: { en: "Breadcrumb", tr: "Konum" },
     designer: { en: "Designer", tr: "Tasarımcı" },

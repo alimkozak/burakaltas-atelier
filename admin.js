@@ -74,7 +74,7 @@ window.MEDIA = ${js(W.MEDIA)};
 /* Gelin yorumları */
 window.REVIEWS = ${js(W.REVIEWS)};
 
-/* Tasarımcı sayfası (designer.html). Boş alanlar sitede görünmez. */
+/* Tasarımcı bölümü (Atölye sayfasında). Boş alanlar sitede görünmez. */
 window.DESIGNER = ${js(W.DESIGNER)};
 `);
 }
@@ -204,10 +204,10 @@ const cleanExtras = (o = {}) => Object.fromEntries(EXTRA_KEYS.map((k) => {
 const hash = (v) => crypto.createHash("sha1").update(typeof v === "string" ? v : JSON.stringify(v ?? null)).digest("hex").slice(0, 12);
 const hashFile = (rel) => { try { return hash(fs.readFileSync(path.join(ROOT, rel), "utf8")); } catch { return ""; } };
 const versions = (W) => ({
-  gowns: hash(W.GOWNS), designer: hash(W.DESIGNER || {}), reviews: hash(W.REVIEWS || []), config: hashFile("assets/js/config.js"),
+  gowns: hash(W.GOWNS), designer: hash(W.DESIGNER || {}), reviews: hash(W.REVIEWS || []), media: hash(W.MEDIA || {}), config: hashFile("assets/js/config.js"),
   g: Object.fromEntries((W.GOWNS || []).map((g) => [g.id, hash(g)]))
 });
-const VERSIONED = { gowns: "gowns", designer: "designer", reviews: "reviews", config: "config" };
+const VERSIONED = { gowns: "gowns", designer: "designer", reviews: "reviews", media: "media", config: "config" };
 
 /* ---------- Deleted gowns can be brought back from the panel ---------- */
 const TRASH = path.join(ROOT, ".yedek", "silinen-modeller.json");
@@ -293,6 +293,17 @@ async function api(req, res, route, remote) {
       highlights: (d.highlights || []).slice(0, 6).map((h) => ({ value: str(h.value, 20), label: bi(h.label, 80) })).filter((h) => h.value || h.label.tr || h.label.en),
       press: (d.press || []).slice(0, 12).map((p) => ({ name: str(p.name, 80), url: /^https:\/\//.test(str(p.url)) ? str(p.url, 500) : "" })).filter((p) => p.name)
     };
+    writeData(W);
+  } else if (route === "media") {
+    // Page photos (cover, After Party, showroom…): slot name → uploaded photos. An empty slot falls back
+    // to the photo written in the page itself.
+    const pages = {};
+    for (const [k, v] of Object.entries(body.pages && typeof body.pages === "object" ? body.pages : {}).slice(0, 40)) {
+      if (!/^[\w-]{2,40}$/.test(k)) continue;
+      const list = (Array.isArray(v) ? v : []).map(imgRef).filter(Boolean).slice(0, 6);
+      if (list.length) pages[k] = list;
+    }
+    W.MEDIA = { ...(W.MEDIA || {}), pages };
     writeData(W);
   } else if (route === "reviews") {
     W.REVIEWS = (body.reviews || []).slice(0, 40).map((r) => ({ name: str(r.name, 60), place: bi(r.place, 80), gown: str(r.gown, 60), text: bi(r.text, 600), photo: imgRef(r.photo) || "" })).filter((r) => r.name && (r.text.tr || r.text.en));

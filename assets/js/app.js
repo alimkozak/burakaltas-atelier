@@ -941,7 +941,10 @@
       // Banner: the first photo of up to three gowns of this collection, starred ones first
       const pool = G.filter((g) => !state.c || g.collection === state.c).sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
       const picks = state.c ? pool.slice(0, 3) : [...C.map((c) => pool.find((g) => g.collection === c.id)), ...pool].filter((g, i, a) => g && a.indexOf(g) === i).slice(0, 3);
-      $("#coll-panels").innerHTML = picks.map((g, i) => `<div class="ph">${img(g.images[0], gownAlt(g, 0), { sizes: "(min-width: 900px) 34vw, 100vw", eager: true }).replace("<img ", `<img ${i === 0 ? 'class="is-on" ' : ""}`)}</div>`).join("");
+      // …unless the panel has banner photos for this collection (Sayfa fotoğrafları › Afiş)
+      const chosen = ((M && M.pages) || {})[`banner-${state.c || "all"}`] || [];
+      const panels = chosen.length ? chosen.slice(0, 3).map((id) => [id, t("pagePhotoAlt")]) : picks.map((g) => [g.images[0], gownAlt(g, 0)]);
+      $("#coll-panels").innerHTML = panels.map(([id, alt], i) => `<div class="ph">${img(id, alt, { sizes: "(min-width: 900px) 34vw, 100vw", eager: true }).replace("<img ", `<img ${i === 0 ? 'class="is-on" ' : ""}`)}</div>`).join("");
       $$("[data-coll]").forEach((b) => { const on = b.dataset.coll === state.c; b.classList.toggle("is-active", on); b.setAttribute("aria-pressed", String(on)); });
     };
     const panel = () => {
@@ -1623,8 +1626,24 @@
     document.head.append(s);
   }
 
+  /* Page photos chosen in the admin panel (Sayfa fotoğrafları) replace the defaults written in the page.
+     Published pages already carry the chosen photos (build.js); this covers the local preview. */
+  function applyPageSlots() {
+    const P = (M && M.pages) || {};
+    $$("img[data-slot]").forEach((im) => {
+      const [key, i] = im.dataset.slot.split(":");
+      const id = (P[key] || [])[+i];
+      if (!id || at(id) === im.getAttribute("src")) return;
+      const set = srcset(id);
+      if (set) im.setAttribute("srcset", set); else im.removeAttribute("srcset");
+      im.src = src(id, 1400);
+      im.alt = t("pagePhotoAlt");
+    });
+  }
+
   /* ---------- Boot ---------- */
   applyStatic();
+  applyPageSlots();
   onLang(renderChrome);
   initChromeEvents();
   initChat();

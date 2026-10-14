@@ -29,7 +29,7 @@
   }
   // Saves carry the version of the data they were based on, so two people editing at once
   // can't silently overwrite each other (the server answers 409 if someone saved in between)
-  const VER_OF = { gowns: "gowns", designer: "designer", reviews: "reviews", media: "media", config: "config" };
+  const VER_OF = { gowns: "gowns", designer: "designer", reviews: "reviews", media: "media", texts: "texts", config: "config" };
   // Saves run one after another: a double tap on Save sends the second save with the version the
   // first one returned, instead of tripping the "someone else saved" check against itself
   let queue = Promise.resolve(), uploading = 0;
@@ -673,7 +673,7 @@
       ["Atölye sayfası", "/atelier.html", [
         { k: "atelierCover", n: 3, t: "Kapak · showroom", d: "Showroom'dan üç dikey fotoğraf.", labels: P3 },
         { k: "atelierStory", n: 1, t: "Hikâye", d: "Atölye yazısının yanındaki fotoğraf." },
-        { k: "atelierMaterials", n: 4, t: "Malzemeler", d: "Dört yakın çekim. Sitedeki başlıklar bu sırayla yazılıdır; sırayı değiştirirseniz başlıklar uymaz.", labels: ["1 · Saten", "2 · Dantel", "3 · Korse & inci", "4 · Tüy"] }
+        { k: "atelierMaterials", n: 4, t: "Malzemeler", d: "Dört yakın çekim. Her fotoğrafın başlığı Sayfa yazıları › Atölye sayfası › Malzeme 1–4'te; fotoğrafların sırasını değiştirirseniz başlıkları da güncelleyin.", labels: ["1 · Saten", "2 · Dantel", "3 · Korse & inci", "4 · Tüy"] }
       ]],
       ["Koleksiyon sayfası", "/collection.html", [
         { k: "collectionBespoke", n: 1, t: "“Aradığınız yok mu?” bölümü", d: "Sayfanın altındaki özel tasarım çağrısının fotoğrafı." },
@@ -704,6 +704,53 @@
       e.preventDefault();
       const btn = $("button[type=submit]", form); btn.disabled = true;
       try { await post("media", { pages }); dirty = false; await reload(); toast("Sayfa fotoğrafları kaydedildi"); renderPages(); }
+      catch (err) { toast(err.message, true); btn.disabled = false; }
+    });
+  }
+
+  /* ======================================================================
+     SAYFA YAZILARI — the home and Atelier page text, in both languages
+     Saved as TEXTS: only what was changed. An empty field shows the page's own wording (grey).
+     ====================================================================== */
+  function renderTexts() {
+    const T = clone(DB.texts || {}), D = DB.textDefaults || {};
+    const changed = (k) => !!(T[k] && (T[k].tr || T[k].en));
+    view.innerHTML = `
+      <div class="head">
+        <div><h1>Sayfa yazıları</h1><p>Ana sayfa ve Atölye sayfasındaki başlıklar ve yazılar. Boş bıraktığınız kutuda gri yazı, sayfadaki ilk hâlidir ve sitede o görünür. <b>*yıldız*</b> arasına yazdığınız kelime italik olur; Enter yeni satır açar.</p></div>
+      </div>
+      <form id="tf" novalidate>
+        ${(DB.textFields || []).map(([title, href, fields]) => `
+        <section class="card">
+          <h2>${esc(title)} <a href="${href}" target="_blank" rel="noopener" style="font-size:.85rem;font-weight:400;margin-left:8px">Sayfayı gör ↗</a></h2>
+          ${fields.map(([k, label]) => `
+          <div class="f full" style="margin-top:18px" data-field="${esc(k)}">
+            <span><b>${esc(label)}</b>${changed(k) ? ` <span class="pill pill--gold">değiştirildi</span>` : ""}
+              <button type="button" class="btn btn--sm btn--ghost" data-reset="${esc(k)}" style="margin-left:8px" ${changed(k) ? "" : "hidden"}>İlk hâline döndür</button></span>
+            ${bi(k, T[k] || {}, { ta: true, ph: D[k] || {} })}
+          </div>`).join("")}
+        </section>`).join("")}
+        <div class="savebar"><span class="msg">Değişiklik yok</span><button type="submit" class="btn btn--ok">Kaydet</button></div>
+      </form>`;
+    const form = $("#tf");
+    const keys = (DB.textFields || []).flatMap((g) => g[2].map(([k]) => k));
+    form.addEventListener("input", (e) => {
+      markDirty();
+      const f = e.target.closest("[data-field]");
+      if (f) $("[data-reset]", f).hidden = !$$("textarea, input", f).some((x) => x.value.trim());
+    });
+    form.addEventListener("click", (e) => {
+      const r = e.target.closest("[data-reset]");
+      if (!r) return;
+      const f = r.closest("[data-field]");
+      $$("textarea, input", f).forEach((x) => (x.value = ""));
+      r.hidden = true; markDirty();
+    });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = $("button[type=submit]", form); btn.disabled = true;
+      const texts = Object.fromEntries(keys.map((k) => [k, readBi(form, k)]).filter(([, v]) => v.tr || v.en));
+      try { await post("texts", { texts }); dirty = false; await reload(); toast("Sayfa yazıları kaydedildi"); renderTexts(); }
       catch (err) { toast(err.message, true); btn.disabled = false; }
     });
   }
@@ -1129,6 +1176,7 @@
     else if (h.startsWith("yeni")) renderEditor(null, h.split("=")[1]);
     else if (h === "tasarimci") renderDesigner();
     else if (h === "sayfalar") renderPages();
+    else if (h === "yazilar") renderTexts();
     else if (h === "yorumlar") renderReviews();
     else if (h === "ayarlar") renderSettings();
     else if (h === "instagram") renderInstagram();

@@ -14,6 +14,7 @@ Paneldeki sekmeler:
 |---|---|
 | **Modeller** | Yeni model ekleme, düzenleme, kopyalama, silme. Fotoğrafları sürükleyip bırakın, panel küçültüp web için hazırlar. ↑↓ ile sıralayın, ★ ile ana sayfada öne çıkarın. Her modele bir **video** eklenebilir. Her modelde eksikleri gösteren bir kontrol listesi vardır. |
 | **Tasarımcı** | Atölye sayfasındaki "Tasarımcı" bölümü: portre, atölye fotoğrafı, hikâye, alıntı, rakamlar, basın. Boş alanlar sitede görünmez. |
+| **Sayfa yazıları** | Ana sayfa ve Atölye sayfasındaki başlıklar ve yazılar, Türkçe ve İngilizce. Boş bırakılan kutuda sayfanın ilk metni görünür; "İlk hâline döndür" değişikliği geri alır. `*kelime*` italik yazar. |
 | **Sayfa fotoğrafları** | Sayfaların kendi fotoğrafları: ana sayfa kapağı, After Party, kapanış; Atölye kapağı (showroom), hikâye, malzemeler; koleksiyon afişleri. Sürükleyip bırakın. Boş bırakılan yerde sayfadaki ilk fotoğraf görünür. |
 | **Gelin yorumları** | Gerçek yorumları ekleyin, sıralayın, silin. Yoruma gelinin fotoğrafını ekleyebilirsiniz. "Giydiği model" alanı bir modelin adıyla aynıysa, yorum o modelin sayfasında **"… modelini giyen gelinler"** bölümünde de görünür. |
 | **Ayarlar** | WhatsApp, e-posta, Etsy, Instagram, adres, çalışma saatleri, online randevu gün ve saatleri, **kişiselleştirme ücretleri**, **canlı sohbet**, **ziyaretçi istatistikleri**, fiyatları göster/gizle. |

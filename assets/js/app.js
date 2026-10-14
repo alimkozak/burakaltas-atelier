@@ -53,12 +53,16 @@
   const rerenders = [];
   const onLang = (fn) => { rerenders.push(fn); fn(); };
 
+  // Page text changed in the admin panel (Sayfa yazıları) wins over the text written in the page
+  const TX = window.TEXTS || {};
+  const markup = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])).replace(/\*([^*\n]+)\*/g, "<em>$1</em>").replace(/\r?\n/g, "<br>");
   function applyStatic() {
     document.documentElement.lang = lang;
     $$("[data-i18n]").forEach((el) => {
       if (el.dataset.en == null) el.dataset.en = el.innerHTML;
       const tr = I.tr[el.dataset.i18n];
-      el.innerHTML = lang === "en" || tr == null ? el.dataset.en : tr;
+      const own = ((TX[el.dataset.i18n] || {})[lang] || "").trim();
+      el.innerHTML = own ? markup(own) : lang === "en" || tr == null ? el.dataset.en : tr;
     });
     $$("[data-i18n-attr]").forEach((el) => {
       el.dataset.i18nAttr.split(";").forEach((pair) => {

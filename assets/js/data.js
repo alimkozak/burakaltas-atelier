@@ -1121,3 +1121,6 @@ window.DESIGNER = {
   "highlights": [],
   "press": []
 };
+
+/* Sayfa yazıları — panelde değiştirilen metinler. Boş bırakılan metin sayfadaki ilk hâliyle görünür. */
+window.TEXTS = {};

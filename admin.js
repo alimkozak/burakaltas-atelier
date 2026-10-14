@@ -76,6 +76,9 @@ window.REVIEWS = ${js(W.REVIEWS)};
 
 /* Tasarımcı bölümü (Atölye sayfasında). Boş alanlar sitede görünmez. */
 window.DESIGNER = ${js(W.DESIGNER)};
+
+/* Sayfa yazıları — panelde değiştirilen metinler. Boş bırakılan metin sayfadaki ilk hâliyle görünür. */
+window.TEXTS = ${js(W.TEXTS || {})};
 `);
 }
 function writeConfig(S) {
@@ -196,6 +199,44 @@ const cleanExtras = (o = {}) => Object.fromEntries(EXTRA_KEYS.map((k) => {
   return [k, v === "" || v === null || v === undefined || !Number.isFinite(+v) ? null : Math.max(0, Math.round(+v))];
 }));
 
+/* ---------- Page text the panel can change (Sayfa yazıları) ----------
+   Keys are the data-i18n names in the pages. The defaults stay in the pages (English) and in
+   i18n.js (Turkish); TEXTS only holds what someone changed. */
+const TEXT_FIELDS = [
+  ["Ana sayfa", "/", [
+    ["hero.h", "Kapak başlığı"], ["hero.lede", "Kapak alt yazısı"],
+    ["yk.def", "Yakamoz: kelimenin anlamı"], ["yk.lede", "Yakamoz: koleksiyon açıklaması"],
+    ["rm.eyebrow", "Süreç: üst yazı"], ["rm.title", "Süreç: başlık"], ["rm.lede", "Süreç: açıklama"],
+    ["st1.h", "Adım 1: başlık"], ["st1.p", "Adım 1: metin"], ["st1.t", "Adım 1: etiket"],
+    ["st2.h", "Adım 2: başlık"], ["st2.p", "Adım 2: metin"], ["st2.t", "Adım 2: etiket"],
+    ["st3.h", "Adım 3: başlık"], ["st3.p", "Adım 3: metin"], ["st3.t", "Adım 3: etiket"],
+    ["st4.h", "Adım 4: başlık"], ["st4.p", "Adım 4: metin"], ["st4.t", "Adım 4: etiket"],
+    ["ap.eyebrow", "After Party: üst yazı"], ["ap.lede", "After Party: açıklama"],
+    ["rv.title", "Gelin yorumları: başlık"], ["rv.lede", "Gelin yorumları: açıklama"],
+    ["cta.eyebrow", "Kapanış: üst yazı"], ["cta.title", "Kapanış: başlık"], ["cta.lede", "Kapanış: açıklama"]
+  ]],
+  ["Atölye sayfası", "/atelier.html", [
+    ["at.eyebrow", "Kapak: üst yazı"], ["at.title", "Kapak: başlık"],
+    ["at.h2", "Hikâye: başlık"], ["at.p1", "Hikâye: 1. paragraf"], ["at.p2", "Hikâye: 2. paragraf"],
+    ["mat.title", "Malzemeler: başlık"], ["mat.sub", "Malzemeler: not"],
+    ["mat.1", "Malzeme 1 (1. fotoğraf)"], ["mat.2", "Malzeme 2 (2. fotoğraf)"], ["mat.3", "Malzeme 3 (3. fotoğraf)"], ["mat.4", "Malzeme 4 (4. fotoğraf)"],
+    ["ds.meetLede", "Tasarımcı: görüşme açıklaması"],
+    ["ds.meetEyebrow", "Kapanış: üst yazı"], ["ds.meetTitle", "Kapanış: başlık"]
+  ]]
+];
+const TEXT_KEYS = new Set(TEXT_FIELDS.flatMap(([, , f]) => f.map(([k]) => k)));
+// The page's own wording, shown in the panel as the default: <em>x</em> → *x*, <br> → new line
+const plain = (html) => String(html || "").replace(/<br\s*\/?>/gi, "\n").replace(/<em\b[^>]*>([\s\S]*?)<\/em>/gi, "*$1*").replace(/<[^>]+>/g, "")
+  .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s*\n\s*/g, "\n").trim();
+function textDefaults(W) {
+  const html = TEXT_FIELDS.map(([, href]) => fs.readFileSync(path.join(ROOT, href === "/" ? "index.html" : href.slice(1)), "utf8")).join("\n");
+  const tr = (W.I18N && W.I18N.tr) || {};
+  return Object.fromEntries([...TEXT_KEYS].map((k) => {
+    const m = new RegExp(`<(\\w+)\\b[^>]*\\bdata-i18n="${k.replace(/\./g, "\\.")}"[^>]*>([\\s\\S]*?)<\\/\\1>`).exec(html);
+    return [k, { en: plain(m && m[2]), tr: plain(tr[k]) }];
+  }));
+}
+
 /* ---------- Two people editing at once ----------
    Every save carries the version of the file it was based on. If someone else saved in the
    meantime, the save is refused instead of silently overwriting their work.
@@ -204,10 +245,10 @@ const cleanExtras = (o = {}) => Object.fromEntries(EXTRA_KEYS.map((k) => {
 const hash = (v) => crypto.createHash("sha1").update(typeof v === "string" ? v : JSON.stringify(v ?? null)).digest("hex").slice(0, 12);
 const hashFile = (rel) => { try { return hash(fs.readFileSync(path.join(ROOT, rel), "utf8")); } catch { return ""; } };
 const versions = (W) => ({
-  gowns: hash(W.GOWNS), designer: hash(W.DESIGNER || {}), reviews: hash(W.REVIEWS || []), media: hash(W.MEDIA || {}), config: hashFile("assets/js/config.js"),
+  gowns: hash(W.GOWNS), designer: hash(W.DESIGNER || {}), reviews: hash(W.REVIEWS || []), media: hash(W.MEDIA || {}), texts: hash(W.TEXTS || {}), config: hashFile("assets/js/config.js"),
   g: Object.fromEntries((W.GOWNS || []).map((g) => [g.id, hash(g)]))
 });
-const VERSIONED = { gowns: "gowns", designer: "designer", reviews: "reviews", media: "media", config: "config" };
+const VERSIONED = { gowns: "gowns", designer: "designer", reviews: "reviews", media: "media", texts: "texts", config: "config" };
 
 /* ---------- Deleted gowns can be brought back from the panel ---------- */
 const TRASH = path.join(ROOT, ".yedek", "silinen-modeller.json");
@@ -232,7 +273,7 @@ const normUrl = (v) => { let s = str(v, 500).trim(); if (!s) return ""; if (/^ht
 async function api(req, res, route, remote) {
   const W = loadSite();
   if (req.method === "GET" && route === "data") {
-    return send(res, 200, { site: W.SITE, collections: W.COLLECTIONS, gowns: W.GOWNS, media: W.MEDIA, reviews: W.REVIEWS || [], designer: W.DESIGNER || {}, ver: versions(W), remote,
+    return send(res, 200, { site: W.SITE, collections: W.COLLECTIONS, gowns: W.GOWNS, media: W.MEDIA, reviews: W.REVIEWS || [], designer: W.DESIGNER || {}, texts: W.TEXTS || {}, textFields: TEXT_FIELDS, textDefaults: textDefaults(W), ver: versions(W), remote,
       trash: readTrash().map((t) => ({ id: t.gown.id, name: t.gown.name, no: t.gown.no, image: t.gown.images[0], date: t.date, ig: t.gown.ig })), checks: readChecks() });
   }
   if (req.method !== "POST") return send(res, 405, { error: "Yöntem desteklenmiyor" });
@@ -304,6 +345,16 @@ async function api(req, res, route, remote) {
       if (list.length) pages[k] = list;
     }
     W.MEDIA = { ...(W.MEDIA || {}), pages };
+    writeData(W);
+  } else if (route === "texts") {
+    // Only known page texts; a text left empty in both languages goes back to the page's own wording
+    const t = {};
+    for (const [k, v] of Object.entries(body.texts && typeof body.texts === "object" ? body.texts : {})) {
+      if (!TEXT_KEYS.has(k)) continue;
+      const val = { en: str(v && v.en, 900).trim(), tr: str(v && v.tr, 900).trim() };
+      if (val.en || val.tr) t[k] = val;
+    }
+    W.TEXTS = t;
     writeData(W);
   } else if (route === "reviews") {
     W.REVIEWS = (body.reviews || []).slice(0, 40).map((r) => ({ name: str(r.name, 60), place: bi(r.place, 80), gown: str(r.gown, 60), text: bi(r.text, 600), photo: imgRef(r.photo) || "" })).filter((r) => r.name && (r.text.tr || r.text.en));

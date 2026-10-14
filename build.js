@@ -7,7 +7,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
-const { toTurkish, withLangLinks } = require("./build-tr.js");
+const { applyTranslations, toTurkish, withLangLinks } = require("./build-tr.js");
 
 const root = __dirname;
 const DIST = path.join(root, "yayin");
@@ -24,6 +24,9 @@ function loadSite() {
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const SIL = { ballgown: "ball gown", aline: "A-line", mermaid: "mermaid", column: "column", mini: "mini" };
 const pick = (o) => (o && typeof o === "object" ? o.en || o.tr || "" : o || "");
+// Page text from the admin panel (Sayfa yazıları): *word* = italic, new line = line break
+const markup = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])).replace(/\*([^*\n]+)\*/g, "<em>$1</em>").replace(/\r?\n/g, "<br>");
+const ownTexts = (W, l) => Object.fromEntries(Object.entries(W.TEXTS || {}).filter(([, v]) => v && String(v[l] || "").trim()).map(([k, v]) => [k, markup(String(v[l]).trim())]));
 
 /* Cache-busting: published pages link assets as "app.js?v=<content hash>", so after a publish
    visitors' browsers fetch the new catalogue instead of a cached copy.
@@ -109,7 +112,7 @@ function build({ dist = false } = {}) {
   // Pages that exist in both languages (404 stays a single, root-level page)
   const STATIC = fs.readdirSync(root).filter((f) => f.endsWith(".html") && !/^gown-/.test(f) && f !== "404.html");
   const PAGES = [...STATIC, ...G.map((g) => `gown-${g.id}.html`)];
-  const TRX = (W.I18N && W.I18N.tr) || {};
+  const TRX = { ...((W.I18N && W.I18N.tr) || {}), ...ownTexts(W, "tr") };
   const L2 = (o, lang) => (o && typeof o === "object" ? (lang === "tr" ? o.tr || o.en : o.en || o.tr) || "" : o || "");
   const SIL_TR = { ballgown: "Prenses", aline: "A kesim", mermaid: "Balık", column: "Düz kesim", mini: "Mini" };
   const XS = new Set(xs);
@@ -237,7 +240,7 @@ function makeDist() {
   // The published catalogue leaves out drafts (and so their photos) — they stay on this computer
   const W0 = loadSite();
   const publicData = `/* Burak Altaş Atelier — katalog (yayın kopyası, taslaklar hariç) */\n` +
-    ["COLLECTIONS", "GOWNS", "MEDIA", "REVIEWS", "DESIGNER"].filter((k) => W0[k] !== undefined)
+    ["COLLECTIONS", "GOWNS", "MEDIA", "REVIEWS", "DESIGNER", "TEXTS"].filter((k) => W0[k] !== undefined)
       .map((k) => `window.${k} = ${JSON.stringify(k === "GOWNS" ? W0.GOWNS.filter((g) => !g.draft) : W0[k], null, 1)};`).join("\n") + "\n";
   // Every upload path mentioned in the catalogue or settings (photos, posters, videos, portraits)
   // …and the default page photos written in the pages themselves, so a fallback never points at a missing file
@@ -266,7 +269,7 @@ function makeDist() {
   }
   for (const f of fs.readdirSync(DIST).filter((f) => f.endsWith(".html") && !/^gown-/.test(f) && f !== "404.html")) {
     const file = path.join(DIST, f);
-    fs.writeFileSync(file, withLangLinks(bakeSlots(fs.readFileSync(file, "utf8"), (W0.MEDIA || {}).pages), S.domain, f, "en"));
+    fs.writeFileSync(file, withLangLinks(applyTranslations(bakeSlots(fs.readFileSync(file, "utf8"), (W0.MEDIA || {}).pages), ownTexts(W0, "en")), S.domain, f, "en"));
   }
   // The shop itself for Google (local search, Maps): built from the settings, so it never goes stale
   const W = loadSite();
